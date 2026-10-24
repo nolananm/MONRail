@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MONRail - Gestion Réseau</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Le "?v=2" force le navigateur à télécharger la nouvelle version du CSS -->
+    <link rel="stylesheet" href="style.css?v=2">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="background-color: var(--bg-light);">
+<body>
 
 <header>
-    <a href="#" class="logo">MON<span>Rail</span> <span style="color:var(--text-muted); font-size:16px; font-weight:500;">| BackOffice</span></a>
+    <a href="#" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="4" y="9" width="16" height="6"></rect><line x1="10" y1="4" x2="10" y2="20"></line></svg>
+        MON<span>Rail</span> <span style="color:var(--text-muted); font-size:16px; font-weight:500; margin-left:10px;">| BackOffice</span>
+    </a>
 </header>
 
 <div class="container">
@@ -18,20 +22,20 @@
 
     <div style="display:flex; gap:20px; flex-wrap:wrap;">
         <div class="admin-card" style="flex: 1; min-width:300px;">
-            <h2 style="margin-top:0;">Ajouter une Gare</h2>
+            <h2 style="margin-top:0; font-size:20px;">Ajouter une Gare</h2>
             <input type="text" id="new-station-name" placeholder="Nom officiel de la gare">
             <button class="btn-admin" onclick="addStation()">Enregistrer la gare</button>
         </div>
 
         <div class="admin-card" style="flex: 1; min-width:300px;">
-            <h2 style="margin-top:0;">Créer une Ligne</h2>
+            <h2 style="margin-top:0; font-size:20px;">Créer une Ligne</h2>
             <select id="train-type">
                 <option value="MONRail CITÉ">MONRail CITÉ</option>
                 <option value="MONRail TER">MONRail TER</option>
                 <option value="MONRail TGV">MONRail TGV</option>
             </select>
             <input type="number" id="base-price" placeholder="Prix de base (€)">
-            <label style="display:block; margin-bottom:15px; cursor:pointer;">
+            <label style="display:block; margin-bottom:15px; cursor:pointer; font-size:14px; font-weight:500;">
                 <input type="checkbox" id="is-exceptional"> Ligne exceptionnelle (Une seule fois)
             </label>
             <button class="btn-admin" style="width:100%;" onclick="createLine()">Générer Ligne (N° auto)</button>
@@ -39,19 +43,18 @@
     </div>
 
     <div class="admin-card">
-        <h2 style="margin-top:0; color:var(--primary-red);">Contrôle du Trafic (Urgences)</h2>
-        <p style="color:var(--text-muted); margin-bottom:20px;">Utilisez cette section pour annuler des trajets ou ajouter des retards sur le réseau en temps réel.</p>
+        <h2 style="margin-top:0; color:var(--primary-red); font-size:20px;">Contrôle du Trafic (Urgences)</h2>
+        <p style="color:var(--text-muted); margin-bottom:20px; font-size:14px;">Utilisez cette section pour annuler des trajets ou ajouter des retards sur le réseau en temps réel.</p>
         
         <input type="text" id="journey-id" placeholder="ID du trajet à modifier (Ex: UUID)">
         <div style="display:flex; gap:10px;">
             <button class="btn-admin" style="background-color:var(--primary-red);" onclick="cancelJourney()">Annuler le train</button>
-            <button class="btn-admin" style="background-color:orange; color:white;" onclick="delayJourney()">Ajouter retard</button>
+            <button class="btn-admin" style="background-color:#f59e0b; color:white;" onclick="delayJourney()">Ajouter retard</button>
         </div>
     </div>
 </div>
 
 <script>
-    // INITIALISATION SUPABASE
     const SUPABASE_URL = 'https://bzlzjyktulpplftqdmvn.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -74,7 +77,6 @@
         
         if(!price) return alert('Veuillez définir un prix.');
 
-        // Numéro à 6 chiffres
         const trainNumber = Math.floor(100000 + Math.random() * 900000).toString();
 
         const { data, error } = await supabase.from('lines').insert([{ 
