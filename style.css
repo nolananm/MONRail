@@ -1,139 +1,272 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONRail - Réservation</title>
+    <link rel="stylesheet" href="style.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
 
-:root {
-    var(--primary-red): #E11D48;
-    --primary-red: #E11D48;
-    --primary-red-hover: #BE123C;
-    --primary-green: #059669;
-    --primary-green-hover: #047857;
-    
-    --bg-app: #F8FAFC;
-    --bg-card: #FFFFFF;
-    --text-main: #0F172A;
-    --text-muted: #64748B;
-    --border-soft: #E2E8F0;
-    
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-    --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.05);
-    --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.1);
-    
-    --radius-md: 12px;
-    --radius-lg: 20px;
-    --radius-pill: 999px;
-}
+<header>
+    <a href="#" class="logo">MON<span>Rail</span><span class="dot">.</span></a>
+    <div class="nav-links">
+        <a href="#horaires-gare">Horaires en gare</a>
+        <a onclick="openTicketsModal()">Vos billets</a>
+    </div>
+    <div class="nav-actions">
+        <!-- Remplacé par une simulation pour éviter le blocage OAuth -->
+        <button class="btn-login" id="auth-btn" onclick="handleAuth()">Mon Espace</button>
+    </div>
+</header>
 
-* { box-sizing: border-box; }
-body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-app); color: var(--text-main); margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-button { font-family: inherit; outline: none; }
+<div class="container">
+    <h1 class="hero-title">Trouvez votre prochain trajet.</h1>
 
-/* HEADER & LOGO ÉPURÉ */
-header {
-    background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    padding: 0 40px; height: 80px; display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-}
-.logo {
-    font-size: 28px; font-weight: 900; color: var(--text-main);
-    text-decoration: none; display: flex; align-items: center; gap: 4px; letter-spacing: -1px;
-}
-.logo span { color: var(--primary-red); }
-.logo .dot { color: var(--primary-green); font-size: 32px; line-height: 0; }
+    <div class="search-widget">
+        <div class="search-input-group">
+            <input type="text" id="dep-input" placeholder="Gare de départ" onkeyup="searchStation(this, 'dep-list')">
+            <div id="dep-list" class="autocomplete-list"></div>
+        </div>
+        <div class="search-input-group">
+            <input type="text" id="arr-input" placeholder="Gare d'arrivée" onkeyup="searchStation(this, 'arr-list')">
+            <div id="arr-list" class="autocomplete-list"></div>
+        </div>
+        <div class="search-input-group" style="flex: 0.5;">
+            <input type="date" id="date-input">
+        </div>
+        <button class="btn-search" onclick="searchTrains()">Rechercher</button>
+    </div>
 
-.nav-links { display: flex; gap: 32px; }
-.nav-links a { text-decoration: none; color: var(--text-main); font-weight: 600; font-size: 15px; padding: 8px 12px; border-radius: 8px; transition: 0.2s; cursor:pointer;}
-.nav-links a:hover { background: #F1F5F9; color: var(--primary-red); }
+    <div id="results-header" class="section-title"></div>
+    <div id="results-container"></div>
 
-.nav-actions { display: flex; align-items: center; gap: 16px; }
-.btn-login {
-    background: var(--text-main); color: white; border: none; font-weight: 600; font-size: 14px; padding: 12px 24px;
-    border-radius: var(--radius-pill); cursor: pointer; transition: 0.3s;
-}
-.btn-login:hover { background: var(--primary-red); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    <div class="board-container" id="horaires-gare">
+        <div class="board-header">
+            <h2>Tableau d'affichage des gares</h2>
+            <div style="position:relative;">
+                <input type="text" id="board-input" placeholder="Rechercher une gare..." onkeyup="searchBoardStation()">
+                <div id="board-list" class="autocomplete-list" style="color:black;"></div>
+            </div>
+        </div>
+        <table class="board-table">
+            <thead>
+                <tr><th>Heure</th><th>Train</th><th>Statut</th></tr>
+            </thead>
+            <tbody id="board-body">
+                <tr><td colspan="3" style="text-align:center; color:#64748B;">Sélectionnez une gare ci-dessus.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
-/* CONTENEUR */
-.container { max-width: 1080px; margin: 0 auto; padding: 60px 20px; }
-.hero-title { text-align: center; font-size: 46px; font-weight: 800; margin-bottom: 40px; letter-spacing: -1px; line-height: 1.2; }
+<div class="modal-overlay" id="tickets-modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="document.getElementById('tickets-modal').style.display='none'">&times;</span>
+        <h2 style="margin-top:0; color:var(--primary-red);">Vos Billets MONRail</h2>
+        <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Retrouvez ici l'historique de vos réservations.</p>
+        <div id="tickets-list-container"></div>
+    </div>
+</div>
 
-/* SEARCH WIDGET */
-.search-widget {
-    background: var(--bg-card); border-radius: var(--radius-pill); padding: 10px 10px 10px 30px; box-shadow: var(--shadow-lg);
-    display: flex; align-items: center; border: 1px solid var(--border-soft); margin: 0 auto 50px auto; max-width: 900px;
-}
-.search-input-group { position: relative; flex: 1; display: flex; align-items: center; }
-.search-input-group input { width: 100%; padding: 18px 15px; border: none; background: transparent; font-size: 16px; font-weight: 600; color: var(--text-main); }
-.search-input-group input::placeholder { color: #94A3B8; }
-.search-input-group:not(:last-child)::after { content: ''; position: absolute; right: 15px; height: 30px; width: 2px; background-color: var(--bg-app); }
-.btn-search {
-    background: var(--primary-green); color: white; border: none; padding: 16px 36px; border-radius: var(--radius-pill); font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.3s; margin-left: 10px;
-}
-.btn-search:hover { background: var(--primary-green-hover); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3); }
+<script>
+    const SUPABASE_URL = 'https://bzlzjyktulpplftqdmvn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* AUTOCOMPLETE */
-.autocomplete-list {
-    position: absolute; top: 70px; left: 0; width: 100%; min-width: 250px; background: var(--bg-card); border: 1px solid var(--border-soft);
-    border-radius: var(--radius-md); max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: var(--shadow-lg); display: none;
-}
-.autocomplete-list div { padding: 14px 20px; cursor: pointer; font-weight: 600; font-size: 15px; }
-.autocomplete-list div:hover { background-color: #F8FAFC; color: var(--primary-red); }
+    let stations = [];
+    let fakeUserEmail = localStorage.getItem('monrail_user'); // Auth simplifiée locale pour MVP
 
-/* RESULTATS ET TIMELINE (Circuit Droit) */
-.section-title { font-size: 26px; font-weight: 800; margin-bottom: 24px; }
-.result-card {
-    background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px 30px; margin-bottom: 16px;
-    box-shadow: var(--shadow-sm); border: 1px solid var(--border-soft); transition: 0.3s; position: relative; overflow: hidden;
-}
-.result-card-header { display: flex; align-items: center; }
-.train-badge { padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; text-transform: uppercase; }
-.badge-tgv { background: #FFE4E6; color: var(--primary-red); }
-.badge-ter { background: #D1FAE5; color: var(--primary-green); }
-.badge-cite { background: #F1F5F9; color: var(--text-main); }
-.journey-times { display: flex; flex-direction: column; gap: 10px; flex: 1; margin-left: 40px; }
-.time-row { display: flex; align-items: center; gap: 16px; }
-.time-val { font-size: 22px; font-weight: 800; width: 70px; }
-.station-val { font-size: 16px; font-weight: 600; color: var(--text-muted); }
-.price-block { text-align: right; width: 180px; border-left: 2px dashed var(--border-soft); padding-left: 30px; }
-.price-val { font-size: 32px; font-weight: 800; display: block; margin-bottom: 12px; }
-.btn-book {
-    background: transparent; color: var(--text-main); border: 2px solid var(--border-soft); padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.3s;
-}
-.btn-book:hover { border-color: var(--primary-red); color: var(--primary-red); }
+    if(fakeUserEmail) {
+        document.getElementById('auth-btn').innerText = fakeUserEmail.split('@')[0];
+    }
 
-/* Ligne de circuit droite */
-.timeline-track {
-    margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--border-soft);
-    display: flex; justify-content: space-between; position: relative;
-}
-.timeline-track::before { content:''; position:absolute; top:35px; left:10px; right:10px; height:3px; background:var(--primary-green); z-index:1; }
-.track-stop { text-align: center; position: relative; z-index: 2; font-size: 13px; font-weight: 600; color: var(--text-muted); width: 33%; }
-.track-dot { width: 18px; height: 18px; background: white; border: 4px solid var(--primary-green); border-radius: 50%; margin: 0 auto 8px auto; }
-.track-dot.end { border-color: var(--primary-red); }
+    async function loadStations() {
+        let { data, error } = await supabase.from('stations').select('*');
+        if (error) console.error("Erreur de chargement des gares:", error);
+        stations = data || [];
+        document.getElementById('date-input').valueAsDate = new Date();
+    }
+    loadStations();
 
-/* HORAIRES GARE */
-.board-container { background: #0F172A; color: white; border-radius: var(--radius-lg); padding: 30px; box-shadow: var(--shadow-lg); margin-top: 60px; }
-.board-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.board-header h2 { margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-.board-header input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 20px; border-radius: var(--radius-pill); font-weight: 500; outline: none; }
-.board-table { width: 100%; border-collapse: collapse; text-align: left; }
-.board-table th { padding: 12px 10px; color: #94A3B8; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.board-table td { padding: 16px 10px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    function getStationName(id) {
+        const s = stations.find(st => st.id === id);
+        return s ? s.name : 'Inconnu';
+    }
 
-/* MODALES */
-.modal-overlay {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); z-index: 999;
-    align-items: center; justify-content: center;
-}
-.modal-content {
-    background: var(--bg-card); border-radius: var(--radius-lg); padding: 40px; width: 90%; max-width: 600px;
-    max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-lg); position: relative;
-}
-.modal-close { position: absolute; top: 20px; right: 20px; font-size: 30px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+    function searchStation(inputEle, listId) {
+        const val = inputEle.value.toLowerCase();
+        const list = document.getElementById(listId);
+        list.innerHTML = '';
+        if (!val) { list.style.display = 'none'; return; }
+        
+        const matches = stations.filter(s => s.name.toLowerCase().includes(val));
+        if(matches.length > 0) list.style.display = 'block'; else list.style.display = 'none';
 
-/* BACKOFFICE */
-.admin-layout { display: flex; gap: 30px; margin-top: 40px; flex-wrap: wrap; }
-.admin-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 30px; margin-bottom: 24px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-soft); flex: 1; min-width: 300px; }
-.admin-card h2 { margin-top: 0; font-size: 20px; margin-bottom: 20px; display:flex; align-items:center; gap:8px;}
-.input-admin { width: 100%; padding: 14px 16px; border: 2px solid var(--bg-app); background: var(--bg-app); border-radius: 10px; margin-bottom: 16px; font-size: 15px; font-weight: 500; transition: 0.2s; }
-.input-admin:focus { border-color: var(--primary-green); background: white; }
-.btn-admin { background: var(--text-main); color: white; border: none; width: 100%; padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-.btn-admin:hover { background: var(--primary-green); }
+        matches.forEach(s => {
+            const div = document.createElement('div');
+            div.innerText = s.name;
+            div.onclick = () => {
+                inputEle.value = s.name;
+                inputEle.dataset.id = s.id; // Sauvegarde de l'ID
+                list.style.display = 'none';
+            };
+            list.appendChild(div);
+        });
+    }
+
+    // Récupère l'ID même si l'utilisateur a tapé le texte sans cliquer la liste
+    function forceGetStationId(inputEle) {
+        if(inputEle.dataset.id) return inputEle.dataset.id;
+        const match = stations.find(s => s.name.toLowerCase() === inputEle.value.toLowerCase());
+        return match ? match.id : null;
+    }
+
+    async function searchTrains() {
+        const depInput = document.getElementById('dep-input');
+        const arrInput = document.getElementById('arr-input');
+        
+        const depId = forceGetStationId(depInput);
+        const arrId = forceGetStationId(arrInput);
+        
+        if (!depId || !arrId) return alert('Veuillez sélectionner des gares valides (Vérifiez l\'orthographe).');
+
+        document.getElementById('results-header').innerHTML = `Résultats : ${depInput.value} ➔ ${arrInput.value}`;
+        const resContainer = document.getElementById('results-container');
+        resContainer.innerHTML = '<p>Recherche en cours...</p>';
+        
+        let { data, error } = await supabase.from('journeys').select('*, lines(*)').neq('status', 'cancelled');
+        if (error) { resContainer.innerHTML = '<p>Erreur réseau.</p>'; return; }
+
+        resContainer.innerHTML = '';
+        if(data && data.length > 0) {
+            data.forEach((journey) => {
+                let badgeClass = journey.lines.train_type.includes('TER') ? 'badge-ter' : (journey.lines.train_type.includes('CITÉ') ? 'badge-cite' : 'badge-tgv');
+                const depDate = new Date(journey.departure_date);
+                const arrDate = new Date(depDate.getTime() + (90 * 60000));
+                let delayInfo = journey.status === 'delayed' ? `<span style="color:#F59E0B; font-weight:bold;">(+${journey.delay_minutes} min)</span>` : '';
+
+                resContainer.innerHTML += `
+                    <div class="result-card">
+                        <div class="result-card-header">
+                            <div class="train-badge ${badgeClass}">${journey.lines.train_type} <br><small>N°${journey.lines.train_number}</small></div>
+                            <div class="journey-times">
+                                <div class="time-row"><span class="time-val">${depDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${depInput.value} ${delayInfo}</span></div>
+                                <div class="time-row"><span class="time-val">${arrDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${arrInput.value}</span></div>
+                            </div>
+                            <div class="price-block">
+                                <span class="price-val">${journey.lines.base_price} €</span>
+                                <button class="btn-book" onclick="bookTrain('${journey.id}', '${depId}', '${arrId}', ${journey.lines.base_price})">Réserver</button>
+                            </div>
+                        </div>
+                        <div class="timeline-track">
+                            <div class="track-stop"><div class="track-dot"></div>DÉPART<br>${depInput.value}</div>
+                            <div class="track-stop"><div class="track-dot" style="border-color:#CBD5E1; background:#F8FAFC;"></div>Passage<br>En transit</div>
+                            <div class="track-stop"><div class="track-dot end"></div>ARRIVÉE<br>${arrInput.value}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            resContainer.innerHTML = '<p>Aucun train programmé.</p>';
+        }
+    }
+
+    function handleAuth() {
+        const email = prompt("Simulateur de Connexion\nEntrez votre adresse email :");
+        if(email) {
+            localStorage.setItem('monrail_user', email);
+            fakeUserEmail = email;
+            document.getElementById('auth-btn').innerText = email.split('@')[0];
+            alert("Connecté avec succès !");
+        }
+    }
+
+    async function bookTrain(journeyId, depId, arrId, price) {
+        if (!fakeUserEmail) {
+            alert('Vous devez vous identifier pour réserver.');
+            handleAuth();
+            if(!fakeUserEmail) return; 
+        }
+        
+        const numCB = prompt("Paiement MONRail\nMontant : " + price + "€\nEntrez votre numéro de carte (Fictif) :");
+        if(numCB) {
+            const { error } = await supabase.from('tickets').insert([{
+                passenger_name: fakeUserEmail,
+                journey_id: journeyId,
+                departure_station_id: depId,
+                arrival_station_id: arrId,
+                price_paid: price
+            }]);
+
+            if(error) alert("Erreur d'émission : " + error.message);
+            else { alert("Paiement validé !"); openTicketsModal(); }
+        }
+    }
+
+    async function openTicketsModal() {
+        if(!fakeUserEmail) return alert("Veuillez vous connecter d'abord.");
+        
+        const modal = document.getElementById('tickets-modal');
+        const container = document.getElementById('tickets-list-container');
+        modal.style.display = 'flex';
+        container.innerHTML = '<p>Chargement...</p>';
+
+        const { data, error } = await supabase.from('tickets')
+            .select('*, journeys(departure_date, lines(train_type, train_number))')
+            .eq('passenger_name', fakeUserEmail);
+
+        if(error) return container.innerHTML = '<p>Erreur.</p>';
+        
+        container.innerHTML = '';
+        if(data.length === 0) return container.innerHTML = '<p>Aucun billet trouvé.</p>';
+
+        data.forEach(ticket => {
+            const depName = getStationName(ticket.departure_station_id);
+            const arrName = getStationName(ticket.arrival_station_id);
+            const depDate = new Date(ticket.journeys.departure_date);
+            const ticketDivId = `ticket-${ticket.id}`;
+            
+            container.innerHTML += `
+                <div class="result-card" id="${ticketDivId}" style="border: 2px solid var(--primary-green); padding:20px;">
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
+                        <strong>MONRail - ${ticket.journeys.lines.train_type} N°${ticket.journeys.lines.train_number}</strong>
+                        <span style="color:gray;">${depDate.toLocaleDateString()}</span>
+                    </div>
+                    <h3 style="margin:5px 0;">${depName} ➔ ${arrName}</h3>
+                    <p style="margin:5px 0;"><strong>Départ :</strong> ${depDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                    <p style="margin:5px 0;"><strong>Passager :</strong> ${ticket.passenger_name}</p>
+                </div>
+                <button class="btn-book" style="margin-bottom:25px;" onclick="downloadSpecificPDF('${ticketDivId}')">Télécharger PDF</button>
+            `;
+        });
+    }
+
+    function downloadSpecificPDF(elementId) { html2pdf(document.getElementById(elementId)); }
+
+    function searchBoardStation() {
+        searchStation(document.getElementById('board-input'), 'board-list');
+        document.getElementById('board-list').querySelectorAll('div').forEach(div => {
+            const oldClick = div.onclick;
+            div.onclick = () => { oldClick(); loadStationBoard(); }
+        });
+    }
+
+    async function loadStationBoard() {
+        const tbody = document.getElementById('board-body');
+        let { data } = await supabase.from('journeys').select('*, lines(*)').limit(5);
+        tbody.innerHTML = '';
+        if(data) {
+            data.forEach((journey, i) => {
+                const time = new Date(journey.departure_date);
+                time.setMinutes(time.getMinutes() + (i * 15));
+                let status = journey.status === 'delayed' ? `<span style="color:#F59E0B">Retard</span>` : (journey.status === 'cancelled' ? '<span style="color:red">Supprimé</span>' : '<span style="color:green">À l'heure</span>');
+                tbody.innerHTML += `<tr><td>${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${journey.lines.train_type}</td><td>${status}</td></tr>`;
+            });
+        }
+    }
+</script>
+</body>
+</html>
