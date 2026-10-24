@@ -40,9 +40,9 @@
 </div>
 
 <script>
-    // MÊMES CLES QUE DANS INDEX.HTML
-    const SUPABASE_URL = 'https://VOTRE_PROJET.supabase.co';
-    const SUPABASE_KEY = 'VOTRE_CLE_ANON';
+    // INITIALISATION SUPABASE
+    const SUPABASE_URL = 'https://bzlzjyktulpplftqdmvn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function addStation() {
@@ -60,7 +60,6 @@
         const price = document.getElementById('base-price').value;
         const isExcep = document.getElementById('is-exceptional').checked;
         
-        // Génération du numéro à 6 chiffres
         const trainNumber = Math.floor(100000 + Math.random() * 900000).toString();
 
         const { data, error } = await supabase.from('lines').insert([{ 
@@ -74,12 +73,10 @@
         else alert('Ligne créée avec le numéro : ' + trainNumber);
     }
     
-    // Fonctionnalité MVP pour simuler l'annulation d'un trajet (Modifie le DOM + Supabase)
     async function cancelJourney(journeyId) {
         const motif = prompt("Motif de l'annulation (laissez vide pour aucun) :");
         await supabase.from('journeys').update({ status: 'cancelled', motif: motif }).eq('id', journeyId);
         alert("Train supprimé. Les clients seront prévenus.");
-        // Le front client s'actualisera en écoutant la BDD ou au refresh.
     }
 </script>
 </body>
