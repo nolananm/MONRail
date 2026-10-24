@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONRail - Gestion Centrale</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<header>
+    <h1>MON<span>Rail</span> <small style="color:gray; font-size:14px;">Espace Gestion</small></h1>
+</header>
+
+<div class="container">
+    <div class="card">
+        <h2>Ajouter une Gare</h2>
+        <input type="text" id="new-station-name" placeholder="Nom de la gare">
+        <button onclick="addStation()">Ajouter</button>
+    </div>
+
+    <div class="card">
+        <h2>Créer une Ligne</h2>
+        <select id="train-type">
+            <option value="MONRail CITÉ">MONRail CITÉ</option>
+            <option value="MONRail TER">MONRail TER</option>
+            <option value="MONRail TGV">MONRail TGV</option>
+        </select>
+        <input type="number" id="base-price" placeholder="Prix de base (€)">
+        <label><input type="checkbox" id="is-exceptional"> Trajet exceptionnel (une fois)</label>
+        <button class="green" onclick="createLine()">Générer Ligne (Numéro auto)</button>
+    </div>
+
+    <div class="card">
+        <h2>Tableau de Contrôle du Trafic</h2>
+        <p>Gérer les annulations, retards et superviser la circulation.</p>
+        <div id="traffic-board"></div>
+    </div>
+</div>
+
+<script>
+    // MÊMES CLES QUE DANS INDEX.HTML
+    const SUPABASE_URL = 'https://VOTRE_PROJET.supabase.co';
+    const SUPABASE_KEY = 'VOTRE_CLE_ANON';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function addStation() {
+        const name = document.getElementById('new-station-name').value;
+        const { data, error } = await supabase.from('stations').insert([{ name: name }]);
+        if (error) alert(error.message);
+        else {
+            alert('Gare ajoutée !');
+            document.getElementById('new-station-name').value = '';
+        }
+    }
+
+    async function createLine() {
+        const type = document.getElementById('train-type').value;
+        const price = document.getElementById('base-price').value;
+        const isExcep = document.getElementById('is-exceptional').checked;
+        
+        // Génération du numéro à 6 chiffres
+        const trainNumber = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const { data, error } = await supabase.from('lines').insert([{ 
+            train_number: trainNumber, 
+            train_type: type, 
+            base_price: price,
+            is_exceptional: isExcep
+        }]);
+
+        if (error) alert(error.message);
+        else alert('Ligne créée avec le numéro : ' + trainNumber);
+    }
+    
+    // Fonctionnalité MVP pour simuler l'annulation d'un trajet (Modifie le DOM + Supabase)
+    async function cancelJourney(journeyId) {
+        const motif = prompt("Motif de l'annulation (laissez vide pour aucun) :");
+        await supabase.from('journeys').update({ status: 'cancelled', motif: motif }).eq('id', journeyId);
+        alert("Train supprimé. Les clients seront prévenus.");
+        // Le front client s'actualisera en écoutant la BDD ou au refresh.
+    }
+</script>
+</body>
+</html>
