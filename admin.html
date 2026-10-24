@@ -2,105 +2,173 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>MONRail - Gestion</title>
+    <title>MONRail - Gestion Centrale</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .row { display: flex; gap: 15px; margin-bottom: 15px; } .col { flex: 1; }
+        label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .stop-item { display:flex; justify-content:space-between; background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:5px; border:1px solid #e2e5ec; }
+    </style>
 </head>
 <body>
+
 <header>
-    <a href="#" class="logo">MON<span>Rail</span> Administrateur</a>
+    <a href="#" class="logo">MON<span>Rail</span> <small style="color:var(--text-muted); font-size:14px; margin-left:10px;">GESTION</small></a>
 </header>
+
 <div class="container">
-    <div class="card">
-        <h3>1. Ajouter une Gare</h3>
-        <input type="text" id="new-station" placeholder="Nom de la gare">
-        <button onclick="addStation()">Ajouter</button>
+    <div class="row">
+        <!-- GARES & LIGNES -->
+        <div class="col admin-card">
+            <h2 style="margin-top:0;">1. Gares & Lignes (Modèles)</h2>
+            <div style="display:flex; gap:10px; margin-bottom:30px;">
+                <input type="text" id="new-station" class="admin-input" style="margin:0;" placeholder="Nouvelle gare...">
+                <button class="btn-admin" onclick="addStation()">Ajouter</button>
+            </div>
+
+            <label>Créer un modèle de Ligne</label>
+            <select id="l-type" class="admin-input"><option>MONRail TGV</option><option>MONRail TER</option><option>MONRail CITÉ</option></select>
+            
+            <div class="row" style="margin-bottom:0;">
+                <div class="col"><input type="number" id="l-price" class="admin-input" placeholder="Prix de base (€)"></div>
+                <div class="col"><select id="l-price-type" class="admin-input"><option value="fixed">Prix Fixe</option><option value="dynamic">Prix Dynamique</option></select></div>
+            </div>
+            <div class="row" style="margin-bottom:0;">
+                <div class="col"><input type="number" id="l-days" class="admin-input" placeholder="Jours avant départ (Dyn)"></div>
+                <div class="col"><input type="number" id="l-late" class="admin-input" placeholder="Prix dernière minute (€)"></div>
+            </div>
+            <label style="font-weight:normal; margin-bottom:15px;"><input type="checkbox" id="l-excep"> Trajet Exceptionnel (1 seule fois)</label>
+
+            <div style="background:#f4f5f9; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <label>Parcours (Ajouter les gares dans l'ordre)</label>
+                <div id="route-list" style="margin-bottom:10px;"></div>
+                <div style="display:flex; gap:10px;">
+                    <select id="r-station" class="admin-input" style="margin:0;"></select>
+                    <input type="number" id="r-time" class="admin-input" style="margin:0; width:100px;" placeholder="+ Min">
+                    <button class="btn-admin" style="background:var(--green);" onclick="addRouteStop()">Ajouter</button>
+                </div>
+            </div>
+            <button class="btn-admin" style="width:100%; background:var(--green);" onclick="createLine()">Générer Ligne (N° Auto)</button>
+        </div>
+
+        <!-- CALENDRIER -->
+        <div class="col admin-card">
+            <h2 style="margin-top:0;">2. Programmation Calendrier</h2>
+            <label>Sélectionner la Ligne</label>
+            <select id="p-line" class="admin-input"></select>
+            
+            <div class="row" style="margin-bottom:0;">
+                <div class="col"><label>Du :</label><input type="date" id="p-start" class="admin-input"></div>
+                <div class="col"><label>Au :</label><input type="date" id="p-end" class="admin-input"></div>
+            </div>
+            <label>Heure du premier départ :</label>
+            <input type="time" id="p-time" class="admin-input">
+
+            <label>Fréquence automatique</label>
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="1" checked> L</label>
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="2" checked> M</label>
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="3" checked> M</label>
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="4" checked> J</label>
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="5" checked> V</label>
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="6" checked> S</label>
+                <label style="font-weight:normal;"><input type="checkbox" class="days" value="0" checked> D</label>
+            </div>
+            <button class="btn-admin" style="width:100%; background:var(--green);" onclick="scheduleJourneys()">Mettre en circulation</button>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>2. Créer une Ligne (Modèle)</h3>
-        <select id="l-type"><option>MONRail CITÉ</option><option>MONRail TGV</option><option>MONRail TER</option></select>
-        <label><input type="checkbox" id="l-excep"> Ligne exceptionnelle (1 seule fois)</label><br><br>
-        
-        <h4>Tarification Dynamique</h4>
-        <input type="number" id="l-price1" placeholder="Prix de base (€)">
-        <input type="number" id="l-days" placeholder="Jours avant départ pour changement">
-        <input type="number" id="l-price2" placeholder="Prix à l'approche (€)"><br><br>
-        
-        <h4>Gares desservies (Dans l'ordre)</h4>
-        <div id="l-stops"></div>
-        <select id="s-station"></select> <input type="number" id="s-time" placeholder="Min depuis départ">
-        <button onclick="addStopToLine()">Ajouter cet arrêt</button><br><br>
-        <button onclick="createLine()" style="width:100%;">Générer Ligne (Numéro Auto)</button>
-    </div>
+    <!-- MODIFICATIONS & GUICHET -->
+    <div class="admin-card">
+        <h2 style="margin-top:0; color:var(--red);">3. Aléas, Arrêts Exceptionnels & Guichet</h2>
+        <label>Sélectionner un train programmé aujourd'hui ou dans le futur :</label>
+        <select id="m-journey" class="admin-input"></select>
 
-    <div class="card">
-        <h3>3. Calendrier de Fréquence</h3>
-        <select id="p-line"></select> <input type="date" id="p-start"> au <input type="date" id="p-end">
-        <input type="time" id="p-time">
-        <p>Jours : <input type="checkbox" class="days" value="1" checked>L <input type="checkbox" class="days" value="2" checked>M <input type="checkbox" class="days" value="3" checked>M <input type="checkbox" class="days" value="4" checked>J <input type="checkbox" class="days" value="5" checked>V <input type="checkbox" class="days" value="6" checked>S <input type="checkbox" class="days" value="0" checked>D</p>
-        <button onclick="schedule()">Programmer ces trajets</button>
-    </div>
+        <div class="row">
+            <div class="col" style="background:#ffebee; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0; font-size:16px;">Retard / Suppression</h3>
+                <input type="text" id="m-motif" class="admin-input" placeholder="Motif visible par le client">
+                <input type="number" id="m-delay" class="admin-input" placeholder="Minutes de retard (0 si suppression)">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-admin" style="background:#f59e0b;" onclick="updateJourney('delayed')">Retarder</button>
+                    <button class="btn-admin" style="background:var(--red);" onclick="updateJourney('cancelled')">Supprimer</button>
+                </div>
+            </div>
 
-    <div class="card">
-        <h3 style="color:var(--red);">4. Circulation & Modifications</h3>
-        <select id="m-journey"></select><br><br>
-        <input type="text" id="m-motif" placeholder="Motif (ex: Panne)">
-        <input type="number" id="m-delay" placeholder="Retard (min)">
-        <button onclick="updateJourney('delayed')">Retarder</button>
-        <button class="btn-red" onclick="updateJourney('cancelled')">Annuler</button><br><br>
-        
-        <h4>Réservation Manuelle (Guichet)</h4>
-        <input type="text" id="g-nom" placeholder="Nom du client">
-        <button onclick="manualBooking()">Émettre Billet</button>
+            <div class="col" style="background:#e8f5e9; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0; font-size:16px;">Arrêt Exceptionnel</h3>
+                <select id="m-excep-station" class="admin-input"></select>
+                <input type="number" id="m-excep-time" class="admin-input" placeholder="Temps depuis départ initial (Min)">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-admin" style="background:var(--text-dark);" onclick="modifyStop('skipped')">Supprimer l'arrêt</button>
+                    <button class="btn-admin" style="background:var(--green);" onclick="modifyStop('added')">Ajouter l'arrêt</button>
+                </div>
+            </div>
+
+            <div class="col" style="background:#f8f9fa; padding:15px; border-radius:8px;">
+                <h3 style="margin-top:0; font-size:16px;">Guichet (Billet Manuel)</h3>
+                <input type="text" id="g-nom" class="admin-input" placeholder="Nom et Prénom du client">
+                <button class="btn-admin" style="width:100%;" onclick="manualBooking()">Émettre Billet (Payé au guichet)</button>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    const supabase = supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
-    let stations = [], stopsDraft = [];
+    const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
+    let stations = [], routeDraft = [];
 
     async function loadData() {
-        const {data: st} = await supabase.from('stations').select('*');
+        const { data: st } = await db.from('stations').select('*').order('name');
         stations = st || [];
-        document.getElementById('s-station').innerHTML = stations.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        
-        const {data: ln} = await supabase.from('lines').select('*');
+        const stOpts = stations.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        document.getElementById('r-station').innerHTML = stOpts;
+        document.getElementById('m-excep-station').innerHTML = stOpts;
+
+        const { data: ln } = await db.from('lines').select('*');
         document.getElementById('p-line').innerHTML = (ln||[]).map(l => `<option value="${l.id}">${l.train_type} N°${l.train_number}</option>`).join('');
-        
-        const {data: jn} = await supabase.from('journeys').select('*, lines(*)').gte('departure_date', new Date().toISOString());
-        document.getElementById('m-journey').innerHTML = (jn||[]).map(j => `<option value="${j.id}">${new Date(j.departure_date).toLocaleString()} - N°${j.lines.train_number}</option>`).join('');
+
+        const { data: jn } = await db.from('journeys').select('*, lines(*)').gte('departure_date', new Date().toISOString()).order('departure_date');
+        document.getElementById('m-journey').innerHTML = (jn||[]).map(j => `<option value="${j.id}">${new Date(j.departure_date).toLocaleString([],{hour:'2-digit',minute:'2-digit'})} - N°${j.lines.train_number}</option>`).join('');
     }
     loadData();
 
     async function addStation() {
-        await supabase.from('stations').insert([{name: document.getElementById('new-station').value}]);
-        alert("Gare ajoutée"); loadData();
+        const name = document.getElementById('new-station').value;
+        if(!name) return;
+        await db.from('stations').insert([{ name }]);
+        document.getElementById('new-station').value = ''; loadData(); alert("Gare enregistrée.");
     }
 
-    function addStopToLine() {
-        const id = document.getElementById('s-station').value;
+    function addRouteStop() {
+        const id = document.getElementById('r-station').value;
         const name = stations.find(s=>s.id===id).name;
-        const min = document.getElementById('s-time').value;
-        stopsDraft.push({id, name, offset: parseInt(min)});
-        document.getElementById('l-stops').innerHTML += `<div>${name} (+${min}m)</div>`;
+        const offset = document.getElementById('r-time').value;
+        if(!offset) return alert("Saisissez les minutes depuis le départ (0 pour la première gare).");
+        routeDraft.push({ id, name, offset: parseInt(offset) });
+        document.getElementById('route-list').innerHTML += `<div class="stop-item"><span>${name}</span> <span>+${offset} min</span></div>`;
+        document.getElementById('r-time').value = '';
     }
 
     async function createLine() {
+        if(routeDraft.length < 2) return alert("Il faut au moins un départ et une arrivée.");
         const num = Math.floor(100000 + Math.random() * 900000).toString();
-        await supabase.from('lines').insert([{
-            train_number: num, train_type: document.getElementById('l-type').value,
+        await db.from('lines').insert([{
+            train_number: num,
+            train_type: document.getElementById('l-type').value,
             is_exceptional: document.getElementById('l-excep').checked,
-            base_price: document.getElementById('l-price1').value,
+            base_price: document.getElementById('l-price').value,
+            price_type: document.getElementById('l-price-type').value,
             days_advance: document.getElementById('l-days').value || 0,
-            late_price: document.getElementById('l-price2').value || 0,
-            stops: JSON.stringify(stopsDraft)
+            late_price: document.getElementById('l-late').value || 0,
+            route: JSON.stringify(routeDraft)
         }]);
-        alert("Ligne créée N°" + num); stopsDraft = []; loadData();
+        alert("Ligne créée N°" + num); routeDraft = []; document.getElementById('route-list').innerHTML = ''; loadData();
     }
 
-    async function schedule() {
-        const line = document.getElementById('p-line').value;
+    async function scheduleJourneys() {
+        const lineId = document.getElementById('p-line').value;
         const start = new Date(document.getElementById('p-start').value);
         const end = new Date(document.getElementById('p-end').value);
         const time = document.getElementById('p-time').value.split(':');
@@ -110,26 +178,43 @@
         for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
             if(days.includes(d.getDay())) {
                 let dep = new Date(d); dep.setHours(time[0], time[1], 0);
-                inserts.push({line_id: line, departure_date: dep.toISOString()});
+                inserts.push({ line_id: lineId, departure_date: dep.toISOString() });
             }
         }
-        await supabase.from('journeys').insert(inserts);
-        alert(inserts.length + " trajets programmés."); loadData();
+        await db.from('journeys').insert(inserts);
+        alert(inserts.length + " trajets programmés !"); loadData();
     }
 
     async function updateJourney(status) {
         const id = document.getElementById('m-journey').value;
         const delay = document.getElementById('m-delay').value || 0;
         const motif = document.getElementById('m-motif').value;
-        await supabase.from('journeys').update({status, delay_minutes: delay, motif}).eq('id', id);
-        alert("Clientèle prévenue.");
+        await db.from('journeys').update({ status, delay_minutes: delay, motif }).eq('id', id);
+        alert("Modification appliquée. Les clients sont alertés.");
+    }
+
+    async function modifyStop(action) {
+        const jId = document.getElementById('m-journey').value;
+        const sId = document.getElementById('m-excep-station').value;
+        const offset = document.getElementById('m-excep-time').value;
+        const sName = stations.find(s=>s.id===sId).name;
+
+        const { data: j } = await db.from('journeys').select('modified_stops').eq('id', jId).single();
+        let mods = JSON.parse(j.modified_stops || '{"added":[], "skipped":[]}');
+        
+        if(action === 'skipped') mods.skipped.push(sId);
+        if(action === 'added') mods.added.push({ id: sId, name: sName, offset: parseInt(offset) });
+
+        await db.from('journeys').update({ modified_stops: JSON.stringify(mods) }).eq('id', jId);
+        alert("Arrêt exceptionnel mis à jour ! Synchronisation client ok.");
     }
 
     async function manualBooking() {
         const nom = document.getElementById('g-nom').value;
         const jId = document.getElementById('m-journey').value;
-        await supabase.from('tickets').insert([{passenger_name: nom, journey_id: jId, price_paid: 0}]);
-        alert("Billet émis pour " + nom);
+        if(!nom) return alert("Saisissez un nom.");
+        await db.from('tickets').insert([{ passenger_name: nom, journey_id: jId }]);
+        alert("Billet validé en base pour " + nom); document.getElementById('g-nom').value = '';
     }
 </script>
 </body>
