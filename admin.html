@@ -3,53 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONRail - Gestion Réseau</title>
-    <!-- Le "?v=2" force le navigateur à télécharger la nouvelle version du CSS -->
-    <link rel="stylesheet" href="style.css?v=2">
+    <title>MONRail - Centre de Contrôle</title>
+    <link rel="stylesheet" href="style.css?v=3">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<header>
+<header style="border-bottom: 2px solid var(--primary-red);">
     <a href="#" class="logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="4" y="9" width="16" height="6"></rect><line x1="10" y1="4" x2="10" y2="20"></line></svg>
-        MON<span>Rail</span> <span style="color:var(--text-muted); font-size:16px; font-weight:500; margin-left:10px;">| BackOffice</span>
+        MON<span>Rail</span> <span style="color:var(--text-muted); font-size:14px; font-weight:600; margin-left:10px; background:#F1F5F9; padding:4px 8px; border-radius:6px;">CENTRE DE CONTRÔLE</span>
     </a>
 </header>
 
-<div class="container">
-    <h1 class="hero-title" style="text-align:left;">Tableau de bord - Gestion du Réseau</h1>
+<div class="container" style="max-width: 1200px;">
+    
+    <div class="admin-layout">
+        <!-- Barre latérale -->
+        <div class="admin-sidebar">
+            <div class="admin-card">
+                <h2>Réseau Ferré</h2>
+                <input type="text" id="new-station-name" class="input-admin" placeholder="Nom de la nouvelle gare">
+                <button class="btn-admin" onclick="addStation()">Ajouter la gare</button>
+            </div>
 
-    <div style="display:flex; gap:20px; flex-wrap:wrap;">
-        <div class="admin-card" style="flex: 1; min-width:300px;">
-            <h2 style="margin-top:0; font-size:20px;">Ajouter une Gare</h2>
-            <input type="text" id="new-station-name" placeholder="Nom officiel de la gare">
-            <button class="btn-admin" onclick="addStation()">Enregistrer la gare</button>
+            <div class="admin-card">
+                <h2>Création Ligne</h2>
+                <select id="train-type" class="input-admin">
+                    <option value="MONRail TGV">MONRail TGV</option>
+                    <option value="MONRail TER">MONRail TER</option>
+                    <option value="MONRail CITÉ">MONRail CITÉ</option>
+                </select>
+                <input type="number" id="base-price" class="input-admin" placeholder="Prix de base (€)">
+                <button class="btn-admin" style="background:var(--primary-green);" onclick="createLine()">Générer Ligne</button>
+            </div>
         </div>
 
-        <div class="admin-card" style="flex: 1; min-width:300px;">
-            <h2 style="margin-top:0; font-size:20px;">Créer une Ligne</h2>
-            <select id="train-type">
-                <option value="MONRail CITÉ">MONRail CITÉ</option>
-                <option value="MONRail TER">MONRail TER</option>
-                <option value="MONRail TGV">MONRail TGV</option>
-            </select>
-            <input type="number" id="base-price" placeholder="Prix de base (€)">
-            <label style="display:block; margin-bottom:15px; cursor:pointer; font-size:14px; font-weight:500;">
-                <input type="checkbox" id="is-exceptional"> Ligne exceptionnelle (Une seule fois)
-            </label>
-            <button class="btn-admin" style="width:100%;" onclick="createLine()">Générer Ligne (N° auto)</button>
-        </div>
-    </div>
-
-    <div class="admin-card">
-        <h2 style="margin-top:0; color:var(--primary-red); font-size:20px;">Contrôle du Trafic (Urgences)</h2>
-        <p style="color:var(--text-muted); margin-bottom:20px; font-size:14px;">Utilisez cette section pour annuler des trajets ou ajouter des retards sur le réseau en temps réel.</p>
-        
-        <input type="text" id="journey-id" placeholder="ID du trajet à modifier (Ex: UUID)">
-        <div style="display:flex; gap:10px;">
-            <button class="btn-admin" style="background-color:var(--primary-red);" onclick="cancelJourney()">Annuler le train</button>
-            <button class="btn-admin" style="background-color:#f59e0b; color:white;" onclick="delayJourney()">Ajouter retard</button>
+        <!-- Contenu Principal -->
+        <div class="admin-content">
+            <div class="admin-card" style="border: 2px solid #FFE4E6;">
+                <h2 style="color:var(--primary-red); display:flex; align-items:center; gap:10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Gestion de Crise & Trafic
+                </h2>
+                <p style="color:var(--text-muted); margin-bottom:20px; font-weight:500;">Modifiez l'état des trains en temps réel. La synchronisation avec l'application client (Horaires en gare et recherche) est instantanée.</p>
+                
+                <div style="display:flex; gap:15px; margin-bottom:15px;">
+                    <input type="text" id="journey-id" class="input-admin" style="margin:0; flex:1;" placeholder="ID du trajet (UUID Supabase)">
+                    <input type="number" id="delay-time" class="input-admin" style="margin:0; width:150px;" placeholder="Minutes">
+                </div>
+                
+                <div style="display:flex; gap:15px;">
+                    <button class="btn-admin" style="background:var(--primary-red);" onclick="cancelJourney()">Supprimer le train</button>
+                    <button class="btn-admin" style="background:#F59E0B;" onclick="delayJourney()">Appliquer Retard</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -62,50 +69,33 @@
     async function addStation() {
         const name = document.getElementById('new-station-name').value;
         if(!name) return alert('Veuillez saisir un nom.');
-        const { data, error } = await supabase.from('stations').insert([{ name: name }]);
-        if (error) alert(error.message);
-        else {
-            alert('Gare ajoutée au réseau avec succès !');
-            document.getElementById('new-station-name').value = '';
-        }
+        const { error } = await supabase.from('stations').insert([{ name: name }]);
+        if (error) alert(error.message); else { alert('Gare ajoutée !'); document.getElementById('new-station-name').value = ''; }
     }
 
     async function createLine() {
         const type = document.getElementById('train-type').value;
         const price = document.getElementById('base-price').value;
-        const isExcep = document.getElementById('is-exceptional').checked;
-        
         if(!price) return alert('Veuillez définir un prix.');
 
         const trainNumber = Math.floor(100000 + Math.random() * 900000).toString();
-
-        const { data, error } = await supabase.from('lines').insert([{ 
-            train_number: trainNumber, 
-            train_type: type, 
-            base_price: price,
-            is_exceptional: isExcep
-        }]);
-
-        if (error) alert(error.message);
-        else alert('Ligne créée avec le numéro : ' + trainNumber);
+        const { error } = await supabase.from('lines').insert([{ train_number: trainNumber, train_type: type, base_price: price }]);
+        if (error) alert(error.message); else alert('Ligne ' + type + ' créée. N°: ' + trainNumber);
     }
     
     async function cancelJourney() {
         const journeyId = document.getElementById('journey-id').value;
-        if(!journeyId) return alert('Veuillez saisir l\'ID du trajet.');
-        const motif = prompt("Motif de l'annulation (visible par les clients) :");
-        
-        await supabase.from('journeys').update({ status: 'cancelled', motif: motif }).eq('id', journeyId);
-        alert("Train supprimé. La synchronisation client est immédiate.");
+        if(!journeyId) return alert('ID manquant.');
+        await supabase.from('journeys').update({ status: 'cancelled' }).eq('id', journeyId);
+        alert("Train supprimé. Les tableaux d'affichage sont à jour.");
     }
 
     async function delayJourney() {
         const journeyId = document.getElementById('journey-id').value;
-        if(!journeyId) return alert('Veuillez saisir l\'ID du trajet.');
-        const delay = prompt("Temps de retard estimé (en minutes) :");
-        
+        const delay = document.getElementById('delay-time').value;
+        if(!journeyId || !delay) return alert('ID ou minutes manquants.');
         await supabase.from('journeys').update({ status: 'delayed', delay_minutes: parseInt(delay) }).eq('id', journeyId);
-        alert("Retard appliqué avec succès.");
+        alert(`Retard de ${delay}min appliqué au réseau.`);
     }
 </script>
 </body>
