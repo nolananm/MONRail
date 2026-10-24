@@ -3,204 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <title>MONRail - Gestion</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .autocomplete-container { position: relative; width: 100%; margin-bottom: 15px; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; }
+        .autocomplete-list div { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .autocomplete-list div:hover { background: #f0fdf4; color: #059669; }
+        .stop-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #f8fafc; padding: 10px; border-radius: 8px; }
+        .journey-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; }
+    </style>
 </head>
 <body>
 <header><a href="#" class="logo">MON<span>Rail</span> <small>AGENT</small></a></header>
-<div class="container">
-    <div id="error-log" style="color:red; font-weight:bold; margin-bottom:20px;"></div>
+<div class="container" style="max-width: 1200px;">
     
     <div class="admin-layout">
-        <div class="admin-card">
-            <h2>1. Infrastructures</h2>
-            <input type="text" id="station-name" class="input-admin" placeholder="Nom de la gare">
-            <button class="btn-admin" onclick="addStation()">Ajouter Gare</button>
-            <hr style="margin:20px 0; border-color:#eee;">
+        <!-- CRÉATION DE LIGNE (Modèle) -->
+        <div class="admin-card" style="flex:1; min-width:350px;">
+            <h2>1. Définir une Ligne (Itinéraire)</h2>
+            <p style="font-size:13px; color:gray;">Créez le modèle du trajet avec ses gares et arrêts.</p>
             
-            <h3>Nouvelle Ligne</h3>
             <select id="l-type" class="input-admin"><option>MONRail TGV</option><option>MONRail TER</option><option>MONRail CITÉ</option></select>
-            <label><input type="checkbox" id="l-excep"> Ligne exceptionnelle</label>
             
-            <h4 style="margin-bottom:5px;">Gestion du Prix</h4>
-            <select id="l-price-type" class="input-admin" onchange="togglePrice(this.value)">
-                <option value="fixed">Prix Fixe</option>
-                <option value="dynamic">Prix Dynamique (selon date)</option>
-            </select>
-            <input type="number" id="l-base-price" class="input-admin" placeholder="Prix initial (€)">
-            <div id="dynamic-fields" style="display:none; background:#f8fafc; padding:10px; border-radius:8px;">
-                <input type="number" id="l-days" class="input-admin" placeholder="Nb de jours avant départ">
-                <input type="number" id="l-late-price" class="input-admin" placeholder="Nouveau prix (€) si délai dépassé">
+            <div class="autocomplete-container">
+                <input type="text" id="l-dep" class="input-admin" placeholder="Gare de départ" style="margin:0;">
+                <div id="l-dep-list" class="autocomplete-list"></div>
             </div>
-            <button class="btn-admin" style="background:var(--primary-green);" onclick="createLine()">Créer la Ligne</button>
-        </div>
+            
+            <div class="autocomplete-container">
+                <input type="text" id="l-arr" class="input-admin" placeholder="Gare d'arrivée" style="margin:0;">
+                <div id="l-arr-list" class="autocomplete-list"></div>
+            </div>
 
-        <div class="admin-card" style="border:2px solid var(--primary-green);">
-            <h2 style="color:var(--primary-green);">2. Programmation (Calendrier)</h2>
-            <select id="p-line" class="input-admin"></select>
-            <select id="p-dep-station" class="input-admin"><option value="">Gare de Départ...</option></select>
-            <select id="p-arr-station" class="input-admin"><option value="">Gare d'Arrivée...</option></select>
-            
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1"><label>Du :</label><input type="date" id="p-start" class="input-admin"></div>
-                <div style="flex:1"><label>Au :</label><input type="date" id="p-end" class="input-admin"></div>
-            </div>
-            <label>Heure de départ :</label><input type="time" id="p-time" class="input-admin">
-            
-            <h4 style="margin:5px 0;">Jours de circulation</h4>
-            <div style="display:flex; gap:10px; margin-bottom:15px;" id="p-days">
-                <label><input type="checkbox" value="1" checked> Lun</label>
-                <label><input type="checkbox" value="2" checked> Mar</label>
-                <label><input type="checkbox" value="3" checked> Mer</label>
-                <label><input type="checkbox" value="4" checked> Jeu</label>
-                <label><input type="checkbox" value="5" checked> Ven</label>
-                <label><input type="checkbox" value="6"> Sam</label>
-                <label><input type="checkbox" value="0"> Dim</label>
-            </div>
-            <button class="btn-admin" style="background:var(--primary-green);" onclick="scheduleJourneys()">Programmer les trains</button>
-        </div>
-
-        <div class="admin-card">
-            <h2 style="color:var(--primary-red);">3. Supervision & Modifications</h2>
-            <input type="text" id="m-journey-id" class="input-admin" placeholder="ID du Trajet ciblé (UUID)">
-            
-            <div style="background:#fef2f2; padding:15px; border-radius:8px; margin-bottom:15px;">
-                <h4>Retard / Annulation</h4>
-                <input type="text" id="m-motif" class="input-admin" placeholder="Motif (ex: Animal sur les voies)">
-                <input type="number" id="m-delay" class="input-admin" placeholder="Minutes de retard">
+            <!-- Ajout des arrêts -->
+            <div style="background:#f8fafc; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin-top:0;">Arrêts intermédiaires</h4>
+                <div id="stops-container"></div>
                 <div style="display:flex; gap:10px;">
-                    <button class="btn-admin" style="background:var(--primary-red);" onclick="updateJourney('cancelled')">Annuler train</button>
-                    <button class="btn-admin" style="background:#f59e0b;" onclick="updateJourney('delayed')">Appliquer Retard</button>
+                    <div class="autocomplete-container" style="margin:0; flex:1;">
+                        <input type="text" id="stop-station" class="input-admin" placeholder="Gare d'arrêt" style="margin:0;">
+                        <div id="stop-list" class="autocomplete-list"></div>
+                    </div>
+                    <input type="number" id="stop-time" class="input-admin" placeholder="+ min" style="width:80px; margin:0;">
+                    <button class="btn-admin" style="width:auto; padding:0 15px;" onclick="addStopToUI()">Ajouter</button>
                 </div>
             </div>
 
-            <div style="background:#f8fafc; padding:15px; border-radius:8px;">
-                <h4>Arrêts Exceptionnels</h4>
-                <input type="text" id="m-station-name" class="input-admin" placeholder="Nom de la gare à cibler">
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-admin" style="background:#64748B;" onclick="modifyStop('skip')">Supprimer l'arrêt</button>
-                    <button class="btn-admin" style="background:var(--primary-green);" onclick="modifyStop('add')">Ajouter l'arrêt</button>
-                </div>
+            <h4 style="margin-bottom:5px;">Tarification</h4>
+            <input type="number" id="l-base-price" class="input-admin" placeholder="Prix de base (€)">
+            <button class="btn-admin" style="background:var(--primary-green);" onclick="createLine()">Enregistrer la Ligne</button>
+        </div>
+
+        <!-- PROGRAMMATION & DUPLICATION -->
+        <div class="admin-card" style="flex:1; min-width:350px; border:2px solid var(--primary-green);">
+            <h2 style="color:var(--primary-green);">2. Planification & Duplication</h2>
+            
+            <h4 style="margin-top:0;">Générer des départs</h4>
+            <select id="p-line" class="input-admin"><option value="">Choisir une ligne existante...</option></select>
+            <input type="date" id="p-date" class="input-admin">
+            <input type="time" id="p-time" class="input-admin">
+            <button class="btn-admin" style="background:var(--primary-green); margin-bottom:30px;" onclick="scheduleJourney()">Programmer ce départ</button>
+            
+            <hr style="border-color:#eee; margin-bottom:20px;">
+            
+            <h4>Trajets programmés (Duplication / Modification)</h4>
+            <div id="journeys-list" style="max-height: 400px; overflow-y:auto;">
+                <p>Chargement...</p>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Duplication / Modif -->
+<div class="modal-overlay" id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div class="modal-content" style="background:white; padding:30px; border-radius:12px; width:400px;">
+        <h3 id="modal-title" style="margin-top:0;">Action</h3>
+        <div id="modal-body"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <button class="btn-admin" style="background:gray; width:auto;" onclick="document.getElementById('action-modal').style.display='none'">Fermer</button>
         </div>
     </div>
 </div>
 
 <script>
     const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
-
-    function logError(msg) { document.getElementById('error-log').innerText = msg; console.error(msg); }
-    function togglePrice(val) { document.getElementById('dynamic-fields').style.display = val === 'dynamic' ? 'block' : 'none'; }
+    
+    let stations = [], lines = [], stopsArray = [];
 
     async function init() {
-        try {
-            const { data: st, error: e1 } = await db.from('stations').select('*');
-            if(e1) throw e1;
-            const sDep = document.getElementById('p-dep-station'), sArr = document.getElementById('p-arr-station');
-            st.forEach(s => {
-                sDep.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-                sArr.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-            });
+        const { data: st } = await db.from('stations').select('*');
+        stations = st || [];
+        
+        setupAutocomplete(document.getElementById('l-dep'), document.getElementById('l-dep-list'));
+        setupAutocomplete(document.getElementById('l-arr'), document.getElementById('l-arr-list'));
+        setupAutocomplete(document.getElementById('stop-station'), document.getElementById('stop-list'));
 
-            const { data: ln, error: e2 } = await db.from('lines').select('*');
-            if(e2) throw e2;
-            const sLine = document.getElementById('p-line');
-            ln.forEach(l => sLine.innerHTML += `<option value="${l.id}">${l.train_type} N°${l.train_number}</option>`);
-        } catch(err) { logError("Erreur d'initialisation DB: " + err.message); }
+        await loadLines();
+        await loadJourneys();
     }
     init();
 
-    async function addStation() {
-        const name = document.getElementById('station-name').value;
-        if(!name) return;
-        const { error } = await db.from('stations').insert([{ name }]);
-        if(error) logError(error.message); else { alert('Gare ajoutée'); location.reload(); }
+    function setupAutocomplete(input, list) {
+        input.addEventListener('input', () => {
+            const val = input.value.toLowerCase();
+            list.innerHTML = '';
+            if(!val) return list.style.display = 'none';
+            const matches = stations.filter(s => s.name.toLowerCase().includes(val));
+            list.style.display = matches.length ? 'block' : 'none';
+            matches.forEach(s => {
+                const div = document.createElement('div'); div.innerText = s.name;
+                div.onclick = () => { input.value = s.name; input.dataset.id = s.id; list.style.display = 'none'; };
+                list.appendChild(div);
+            });
+        });
+    }
+
+    function addStopToUI() {
+        const input = document.getElementById('stop-station');
+        const timeInput = document.getElementById('stop-time');
+        if(!input.dataset.id || !timeInput.value) return alert("Gare d'arrêt et temps (min) requis.");
+        
+        stopsArray.push({ id: input.dataset.id, name: input.value, offset: parseInt(timeInput.value) });
+        
+        const container = document.getElementById('stops-container');
+        container.innerHTML += `<div class="stop-item"><strong>${input.value}</strong> (+${timeInput.value} min)</div>`;
+        input.value = ''; input.dataset.id = ''; timeInput.value = '';
+    }
+
+    async function loadLines() {
+        const { data } = await db.from('lines').select('*, departure_station_id, arrival_station_id');
+        lines = data || [];
+        const select = document.getElementById('p-line');
+        select.innerHTML = '<option value="">Choisir une ligne existante...</option>';
+        lines.forEach(l => {
+            const depName = stations.find(s => s.id === l.departure_station_id)?.name;
+            const arrName = stations.find(s => s.id === l.arrival_station_id)?.name;
+            select.innerHTML += `<option value="${l.id}">${l.train_type} N°${l.train_number} (${depName} ➔ ${arrName})</option>`;
+        });
     }
 
     async function createLine() {
-        try {
-            const type = document.getElementById('l-type').value;
-            const isExcep = document.getElementById('l-excep').checked;
-            const priceType = document.getElementById('l-price-type').value;
-            const basePrice = document.getElementById('l-base-price').value;
-            const num = Math.floor(100000 + Math.random() * 900000).toString();
-
-            let payload = { train_number: num, train_type: type, is_exceptional: isExcep, price_type: priceType, base_price: basePrice };
-            if(priceType === 'dynamic') {
-                payload.days_before_change = document.getElementById('l-days').value;
-                payload.late_price = document.getElementById('l-late-price').value;
-            }
-
-            const { error } = await db.from('lines').insert([payload]);
-            if(error) throw error;
-            alert('Ligne N°' + num + ' créée avec succès.'); location.reload();
-        } catch(err) { logError(err.message); }
-    }
-
-    async function scheduleJourneys() {
-        try {
-            const lineId = document.getElementById('p-line').value;
-            const depId = document.getElementById('p-dep-station').value;
-            const arrId = document.getElementById('p-arr-station').value;
-            const start = new Date(document.getElementById('p-start').value);
-            const end = new Date(document.getElementById('p-end').value);
-            const timeStr = document.getElementById('p-time').value.split(':');
-            
-            if(!lineId || !depId || !arrId || isNaN(start) || isNaN(end) || timeStr.length < 2) return alert('Remplissez tout le calendrier.');
-
-            const allowedDays = Array.from(document.querySelectorAll('#p-days input:checked')).map(cb => parseInt(cb.value));
-            let inserts = [];
-            
-            for(let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                if(allowedDays.includes(d.getDay())) {
-                    let depDate = new Date(d);
-                    depDate.setHours(timeStr[0], timeStr[1], 0);
-                    inserts.push({ line_id: lineId, departure_station_id: depId, arrival_station_id: arrId, departure_date: depDate.toISOString() });
-                }
-            }
-
-            const { error } = await db.from('journeys').insert(inserts);
-            if(error) throw error;
-            alert(`${inserts.length} trajets générés avec succès.`);
-        } catch(err) { logError(err.message); }
-    }
-
-    async function updateJourney(status) {
-        const id = document.getElementById('m-journey-id').value;
-        const motif = document.getElementById('m-motif').value;
-        const delay = document.getElementById('m-delay').value || 0;
-        if(!id) return alert('ID requis');
+        const type = document.getElementById('l-type').value;
+        const depId = document.getElementById('l-dep').dataset.id;
+        const arrId = document.getElementById('l-arr').dataset.id;
+        const price = document.getElementById('l-base-price').value;
         
-        const { error } = await db.from('journeys').update({ status, motif, delay_minutes: delay }).eq('id', id);
-        if(error) logError(error.message); else alert('Trajet mis à jour (Synchronisé côté client).');
+        if(!depId || !arrId || !price) return alert("Gares et prix obligatoires.");
+        const num = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const { error } = await db.from('lines').insert([{
+            train_number: num, train_type: type,
+            departure_station_id: depId, arrival_station_id: arrId,
+            base_price: price, stops: JSON.stringify(stopsArray)
+        }]);
+
+        if(error) alert(error.message);
+        else { alert("Ligne créée."); stopsArray = []; document.getElementById('stops-container').innerHTML = ''; await loadLines(); }
     }
 
-    async function modifyStop(action) {
-        const id = document.getElementById('m-journey-id').value;
-        const sName = document.getElementById('m-station-name').value;
-        if(!id || !sName) return alert('ID Trajet et Nom de gare requis.');
+    async function scheduleJourney() {
+        const lineId = document.getElementById('p-line').value;
+        const date = document.getElementById('p-date').value;
+        const time = document.getElementById('p-time').value;
+        if(!lineId || !date || !time) return alert("Remplissez tout.");
+        
+        const depDate = new Date(`${date}T${time}:00`);
+        const { error } = await db.from('journeys').insert([{ line_id: lineId, departure_date: depDate.toISOString() }]);
+        
+        if(error) alert(error.message); else { alert("Départ programmé !"); loadJourneys(); }
+    }
 
-        try {
-            const { data: st } = await db.from('stations').select('id').ilike('name', sName).single();
-            if(!st) throw new Error("Gare introuvable.");
+    async function loadJourneys() {
+        const list = document.getElementById('journeys-list');
+        const { data } = await db.from('journeys').select('*, lines(*)').order('departure_date', {ascending: true}).limit(20);
+        list.innerHTML = '';
+        if(!data || data.length === 0) return list.innerHTML = 'Aucun trajet.';
+        
+        data.forEach(j => {
+            const d = new Date(j.departure_date);
+            const depName = stations.find(s => s.id === j.lines.departure_station_id)?.name;
+            const arrName = stations.find(s => s.id === j.lines.arrival_station_id)?.name;
+            let status = j.status === 'on_time' ? '<span style="color:green">À l\'heure</span>' : `<span style="color:red">${j.status}</span>`;
 
-            const { data: j } = await db.from('journeys').select('skipped_stations, added_stations').eq('id', id).single();
-            
-            let updatePayload = {};
-            if(action === 'skip') {
-                let skipped = JSON.parse(j.skipped_stations || '[]');
-                skipped.push(st.id);
-                updatePayload = { skipped_stations: JSON.stringify(skipped) };
-            } else {
-                let added = JSON.parse(j.added_stations || '[]');
-                added.push(st.id);
-                updatePayload = { added_stations: JSON.stringify(added) };
-            }
+            list.innerHTML += `
+                <div class="journey-item">
+                    <div>
+                        <strong>${d.toLocaleDateString()} - ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</strong><br>
+                        <small>${j.lines.train_type} N°${j.lines.train_number} | ${depName} ➔ ${arrName}</small><br>${status}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <button style="padding:5px 10px; cursor:pointer;" onclick="openDuplicate('${j.line_id}')">Dupliquer</button>
+                        <button style="padding:5px 10px; cursor:pointer; color:red;" onclick="openDelay('${j.id}')">Retard/Annul</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
 
-            const { error } = await db.from('journeys').update(updatePayload).eq('id', id);
-            if(error) throw error;
-            alert(`Arrêt ${action === 'skip' ? 'supprimé' : 'ajouté'} avec succès sur ce trajet.`);
-        } catch(err) { logError(err.message); }
+    function openDuplicate(lineId) {
+        const modal = document.getElementById('action-modal');
+        document.getElementById('modal-title').innerText = "Dupliquer le trajet";
+        document.getElementById('modal-body').innerHTML = `
+            <input type="date" id="dup-date" class="input-admin">
+            <input type="time" id="dup-time" class="input-admin">
+            <button class="btn-admin" style="background:var(--primary-green);" onclick="confirmDuplicate('${lineId}')">Créer la copie</button>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    async function confirmDuplicate(lineId) {
+        const date = document.getElementById('dup-date').value;
+        const time = document.getElementById('dup-time').value;
+        if(!date || !time) return alert("Date et heure requises.");
+        const depDate = new Date(`${date}T${time}:00`);
+        await db.from('journeys').insert([{ line_id: lineId, departure_date: depDate.toISOString() }]);
+        document.getElementById('action-modal').style.display = 'none';
+        loadJourneys();
+    }
+
+    function openDelay(journeyId) {
+        const modal = document.getElementById('action-modal');
+        document.getElementById('modal-title').innerText = "Modifier l'état du train";
+        document.getElementById('modal-body').innerHTML = `
+            <input type="text" id="mod-motif" class="input-admin" placeholder="Motif visible par le client">
+            <input type="number" id="mod-delay" class="input-admin" placeholder="Retard en minutes (0 si annulation)">
+            <div style="display:flex; gap:10px;">
+                <button class="btn-admin" style="background:orange;" onclick="applyMod('${journeyId}', 'delayed')">Retarder</button>
+                <button class="btn-admin" style="background:red;" onclick="applyMod('${journeyId}', 'cancelled')">Annuler</button>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    async function applyMod(id, status) {
+        const motif = document.getElementById('mod-motif').value;
+        const delay = document.getElementById('mod-delay').value || 0;
+        await db.from('journeys').update({ status: status, motif: motif, delay_minutes: delay }).eq('id', id);
+        document.getElementById('action-modal').style.display = 'none';
+        loadJourneys();
     }
 </script>
 </body>
