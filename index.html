@@ -51,9 +51,9 @@
 </div>
 
 <script>
-    // INITIALISATION SUPABASE (Remplacez par vos clés Supabase)
-    const SUPABASE_URL = 'https://VOTRE_PROJET.supabase.co';
-    const SUPABASE_KEY = 'VOTRE_CLE_ANON';
+    // INITIALISATION SUPABASE
+    const SUPABASE_URL = 'https://bzlzjyktulpplftqdmvn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let stations = [];
@@ -104,7 +104,6 @@
         resContainer.innerHTML = '';
         if(data && data.length > 0) {
             data.forEach(journey => {
-                // Mockup visuel d'un résultat avec circuit
                 resContainer.innerHTML += `
                     <div class="card">
                         <h3>${journey.lines.train_type} n°${journey.lines.train_number} ${journey.lines.is_exceptional ? '<span style="color:red">(Exceptionnel)</span>' : ''}</h3>
@@ -128,12 +127,10 @@
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             alert('Vous devez créer un compte ou vous connecter pour associer un nom au billet.');
-            // Logique de login fictive pour l'exemple
-            await supabase.auth.signInWithOAuth({ provider: 'github' }); // Ou form email/mdp
+            await supabase.auth.signInWithOAuth({ provider: 'github' });
             return;
         }
         
-        // Faux paiement
         const numCB = prompt("Entrez un numéro de carte (Faux système - tout est accepté) :");
         if(numCB) {
             alert("Paiement accepté ! Génération du billet...");
