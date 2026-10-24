@@ -3,61 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONRail - Centre de Contrôle</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <title>MONRail - Espace Agent</title>
+    <link rel="stylesheet" href="style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<header style="border-bottom: 2px solid var(--primary-red);">
-    <a href="#" class="logo">
-        MON<span>Rail</span> <span style="color:var(--text-muted); font-size:14px; font-weight:600; margin-left:10px; background:#F1F5F9; padding:4px 8px; border-radius:6px;">CENTRE DE CONTRÔLE</span>
-    </a>
+<header style="border-bottom: 3px solid var(--primary-green);">
+    <a href="#" class="logo">MON<span>Rail</span><span class="dot">.</span> <span style="font-size:14px; color:var(--text-muted); font-weight:600; margin-left:10px;">ESPACE AGENT</span></a>
 </header>
 
 <div class="container" style="max-width: 1200px;">
-    
     <div class="admin-layout">
-        <!-- Barre latérale -->
-        <div class="admin-sidebar">
+        
+        <!-- COLONNE 1 : INFRASTRUCTURE -->
+        <div style="flex: 1; min-width:300px;">
             <div class="admin-card">
-                <h2>Réseau Ferré</h2>
-                <input type="text" id="new-station-name" class="input-admin" placeholder="Nom de la nouvelle gare">
-                <button class="btn-admin" onclick="addStation()">Ajouter la gare</button>
-            </div>
-
-            <div class="admin-card">
-                <h2>Création Ligne</h2>
+                <h2>1. Infrastructure (Lignes & Gares)</h2>
+                <input type="text" id="new-station-name" class="input-admin" placeholder="Nom d'une nouvelle gare">
+                <button class="btn-admin" onclick="addStation()" style="margin-bottom:20px;">Ajouter la gare</button>
+                
                 <select id="train-type" class="input-admin">
                     <option value="MONRail TGV">MONRail TGV</option>
                     <option value="MONRail TER">MONRail TER</option>
                     <option value="MONRail CITÉ">MONRail CITÉ</option>
                 </select>
-                <input type="number" id="base-price" class="input-admin" placeholder="Prix de base (€)">
-                <button class="btn-admin" style="background:var(--primary-green);" onclick="createLine()">Générer Ligne</button>
+                <input type="number" id="base-price" class="input-admin" placeholder="Prix fixe de la ligne (€)">
+                <button class="btn-admin" style="background:var(--primary-green);" onclick="createLine()">Générer Modèle de Ligne</button>
             </div>
         </div>
 
-        <!-- Contenu Principal -->
-        <div class="admin-content">
-            <div class="admin-card" style="border: 2px solid #FFE4E6;">
-                <h2 style="color:var(--primary-red); display:flex; align-items:center; gap:10px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    Gestion de Crise & Trafic
-                </h2>
-                <p style="color:var(--text-muted); margin-bottom:20px; font-weight:500;">Modifiez l'état des trains en temps réel. La synchronisation avec l'application client (Horaires en gare et recherche) est instantanée.</p>
+        <!-- COLONNE 2 : NOUVEAU - PLANIFICATION CALENDRIER -->
+        <div style="flex: 1; min-width:300px;">
+            <div class="admin-card" style="border: 2px solid var(--primary-green);">
+                <h2 style="color:var(--primary-green);">2. Calendrier (Planifier un départ)</h2>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Sélectionnez une ligne existante et définissez sa date de départ réelle pour qu'elle apparaisse aux clients.</p>
                 
-                <div style="display:flex; gap:15px; margin-bottom:15px;">
-                    <input type="text" id="journey-id" class="input-admin" style="margin:0; flex:1;" placeholder="ID du trajet (UUID Supabase)">
-                    <input type="number" id="delay-time" class="input-admin" style="margin:0; width:150px;" placeholder="Minutes">
-                </div>
-                
-                <div style="display:flex; gap:15px;">
-                    <button class="btn-admin" style="background:var(--primary-red);" onclick="cancelJourney()">Supprimer le train</button>
-                    <button class="btn-admin" style="background:#F59E0B;" onclick="delayJourney()">Appliquer Retard</button>
-                </div>
+                <select id="select-line-plan" class="input-admin"></select>
+                <input type="datetime-local" id="plan-date" class="input-admin">
+                <button class="btn-admin" style="background:var(--primary-green);" onclick="planJourney()">Mettre en circulation</button>
             </div>
         </div>
+
+        <!-- COLONNE 3 : NOUVEAU - GUICHET MANUEL -->
+        <div style="flex: 1; min-width:300px;">
+            <div class="admin-card">
+                <h2>3. Guichet (Réservation Manuelle)</h2>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Générer un billet au nom du client sans paiement par carte (espèces au guichet).</p>
+                
+                <input type="text" id="manual-passenger" class="input-admin" placeholder="Nom du passager">
+                <input type="text" id="manual-journey-id" class="input-admin" placeholder="ID du Trajet (UUID)">
+                <button class="btn-admin" onclick="manualBooking()">Éditer le billet</button>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -66,36 +65,69 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Initialisation
+    async function initAdmin() {
+        // Charger les lignes pour la planification
+        const { data: lines } = await supabase.from('lines').select('*');
+        const selectPlan = document.getElementById('select-line-plan');
+        if(lines) {
+            lines.forEach(line => {
+                const opt = document.createElement('option');
+                opt.value = line.id;
+                opt.innerText = `${line.train_type} N°${line.train_number} - ${line.base_price}€`;
+                selectPlan.appendChild(opt);
+            });
+        }
+    }
+    initAdmin();
+
     async function addStation() {
         const name = document.getElementById('new-station-name').value;
-        if(!name) return alert('Veuillez saisir un nom.');
         const { error } = await supabase.from('stations').insert([{ name: name }]);
-        if (error) alert(error.message); else { alert('Gare ajoutée !'); document.getElementById('new-station-name').value = ''; }
+        if (!error) { alert('Gare ajoutée !'); document.getElementById('new-station-name').value = ''; }
     }
 
     async function createLine() {
         const type = document.getElementById('train-type').value;
         const price = document.getElementById('base-price').value;
-        if(!price) return alert('Veuillez définir un prix.');
-
         const trainNumber = Math.floor(100000 + Math.random() * 900000).toString();
         const { error } = await supabase.from('lines').insert([{ train_number: trainNumber, train_type: type, base_price: price }]);
-        if (error) alert(error.message); else alert('Ligne ' + type + ' créée. N°: ' + trainNumber);
+        if (!error) { alert('Ligne créée ! Rechargez la page pour l\'avoir dans le planificateur.'); }
     }
     
-    async function cancelJourney() {
-        const journeyId = document.getElementById('journey-id').value;
-        if(!journeyId) return alert('ID manquant.');
-        await supabase.from('journeys').update({ status: 'cancelled' }).eq('id', journeyId);
-        alert("Train supprimé. Les tableaux d'affichage sont à jour.");
+    // NOUVEAU : Planifier un Trajet (Calendrier)
+    async function planJourney() {
+        const lineId = document.getElementById('select-line-plan').value;
+        const date = document.getElementById('plan-date').value;
+        
+        if(!lineId || !date) return alert("Veuillez sélectionner une ligne et une date.");
+
+        const { error } = await supabase.from('journeys').insert([{ 
+            line_id: lineId, 
+            departure_date: date,
+            status: 'on_time'
+        }]);
+
+        if (error) alert("Erreur : " + error.message);
+        else alert("Train mis en circulation avec succès à cette date ! Les clients peuvent désormais le réserver.");
     }
 
-    async function delayJourney() {
-        const journeyId = document.getElementById('journey-id').value;
-        const delay = document.getElementById('delay-time').value;
-        if(!journeyId || !delay) return alert('ID ou minutes manquants.');
-        await supabase.from('journeys').update({ status: 'delayed', delay_minutes: parseInt(delay) }).eq('id', journeyId);
-        alert(`Retard de ${delay}min appliqué au réseau.`);
+    // NOUVEAU : Réservation Manuelle
+    async function manualBooking() {
+        const passenger = document.getElementById('manual-passenger').value;
+        const journeyId = document.getElementById('manual-journey-id').value;
+        
+        if(!passenger || !journeyId) return alert("Nom et ID Trajet requis.");
+
+        // On crée un billet sans lier de compte utilisateur web (user_id restera NULL ou un ID admin)
+        const { error } = await supabase.from('tickets').insert([{
+            passenger_name: passenger,
+            journey_id: journeyId,
+            price_paid: 0 // Payé au guichet
+        }]);
+
+        if (error) alert("Erreur : " + error.message);
+        else alert("Billet édité et validé en base de données pour " + passenger + ".");
     }
 </script>
 </body>
