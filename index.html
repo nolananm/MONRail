@@ -2,271 +2,193 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONRail - Réservation</title>
+    <title>MONRail - Client</title>
     <link rel="stylesheet" href="style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-
 <header>
-    <a href="#" class="logo">MON<span>Rail</span><span class="dot">.</span></a>
-    <div class="nav-links">
-        <a href="#horaires-gare">Horaires en gare</a>
-        <a onclick="openTicketsModal()" style="cursor: pointer;">Vos billets</a>
-    </div>
-    <div class="nav-actions">
-        <button class="btn-login" id="auth-btn" onclick="handleAuth()">Mon Espace</button>
-    </div>
+    <a href="#" class="logo">MON<span>Rail</span></a>
+    <button class="btn-login" id="auth-btn" onclick="handleAuth()">Connexion</button>
 </header>
-
 <div class="container">
-    <h1 class="hero-title">Trouvez votre prochain trajet.</h1>
-
+    <div id="error-log" style="color:red; text-align:center;"></div>
+    
     <div class="search-widget">
-        <div class="search-input-group">
-            <input type="text" id="dep-input" placeholder="Gare de départ" onkeyup="searchStation(this, 'dep-list')">
-            <div id="dep-list" class="autocomplete-list"></div>
-        </div>
-        <div class="search-input-group">
-            <input type="text" id="arr-input" placeholder="Gare d'arrivée" onkeyup="searchStation(this, 'arr-list')">
-            <div id="arr-list" class="autocomplete-list"></div>
-        </div>
-        <div class="search-input-group" style="flex: 0.5;">
-            <input type="date" id="date-input">
-        </div>
-        <button class="btn-search" onclick="searchTrains()">Rechercher</button>
+        <div class="search-input-group"><input type="text" id="dep-input" placeholder="Départ" onkeyup="searchStation(this, 'dep-list')"><div id="dep-list" class="autocomplete-list"></div></div>
+        <div class="search-input-group"><input type="text" id="arr-input" placeholder="Arrivée" onkeyup="searchStation(this, 'arr-list')"><div id="arr-list" class="autocomplete-list"></div></div>
+        <div class="search-input-group" style="flex:0.5;"><input type="date" id="date-input"></div>
+        <button class="btn-search" onclick="searchTrains()">Chercher</button>
     </div>
 
-    <div id="results-header" class="section-title"></div>
     <div id="results-container"></div>
 
-    <div class="board-container" id="horaires-gare">
+    <div class="board-container" id="horaires-gare" style="margin-top:60px;">
         <div class="board-header">
-            <h2>Tableau d'affichage des gares</h2>
+            <h2>Horaires en gare (10 prochains trains)</h2>
             <div style="position:relative;">
-                <input type="text" id="board-input" placeholder="Rechercher une gare..." onkeyup="searchBoardStation()">
+                <input type="text" id="board-input" placeholder="Saisir la gare..." onkeyup="searchBoardStation()">
                 <div id="board-list" class="autocomplete-list" style="color:black;"></div>
             </div>
         </div>
         <table class="board-table">
-            <thead>
-                <tr><th>Heure</th><th>Train</th><th>Statut</th></tr>
-            </thead>
-            <tbody id="board-body">
-                <tr><td colspan="3" style="text-align:center; color:#64748B;">Sélectionnez une gare ci-dessus.</td></tr>
-            </tbody>
+            <thead><tr><th>Heure</th><th>Train</th><th>Direction/Provenance</th><th>Statut</th></tr></thead>
+            <tbody id="board-body"><tr><td colspan="4" style="text-align:center;">Sélectionnez une gare.</td></tr></tbody>
         </table>
     </div>
 </div>
 
-<div class="modal-overlay" id="tickets-modal">
-    <div class="modal-content">
-        <span class="modal-close" onclick="document.getElementById('tickets-modal').style.display='none'">&times;</span>
-        <h2 style="margin-top:0; color:var(--primary-red);">Vos Billets MONRail</h2>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Retrouvez ici l'historique de vos réservations.</p>
-        <div id="tickets-list-container"></div>
-    </div>
-</div>
-
 <script>
-    const SUPABASE_URL = 'https://bzlzjyktulpplftqdmvn.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
 
-    let stations = [];
-    let fakeUserEmail = localStorage.getItem('monrail_user'); 
+    let stations = [], fakeUser = localStorage.getItem('monrail_user');
+    if(fakeUser) document.getElementById('auth-btn').innerText = fakeUser.split('@')[0];
 
-    if(fakeUserEmail) {
-        document.getElementById('auth-btn').innerText = fakeUserEmail.split('@')[0];
+    async function init() {
+        try {
+            const { data, error } = await supabase.from('stations').select('*');
+            if(error) throw error;
+            stations = data || [];
+            document.getElementById('date-input').valueAsDate = new Date();
+        } catch(err) { document.getElementById('error-log').innerText = "Connexion DB échouée."; }
     }
+    init();
 
-    async function loadStations() {
-        let { data, error } = await supabase.from('stations').select('*');
-        if (error) console.error("Erreur gares:", error);
-        stations = data || [];
-        document.getElementById('date-input').valueAsDate = new Date();
-    }
-    loadStations();
-
-    function getStationName(id) {
-        const s = stations.find(st => st.id === id);
-        return s ? s.name : 'Inconnu';
-    }
+    function getStationName(id) { const s = stations.find(x => x.id === id); return s ? s.name : 'Inconnu'; }
+    function forceGetStationId(input) { return input.dataset.id || (stations.find(s => s.name.toLowerCase() === input.value.toLowerCase())?.id); }
 
     function searchStation(inputEle, listId) {
-        const val = inputEle.value.toLowerCase();
-        const list = document.getElementById(listId);
+        const val = inputEle.value.toLowerCase(), list = document.getElementById(listId);
         list.innerHTML = '';
-        if (!val) { list.style.display = 'none'; return; }
-        
+        if(!val) { list.style.display = 'none'; return; }
         const matches = stations.filter(s => s.name.toLowerCase().includes(val));
-        if(matches.length > 0) list.style.display = 'block'; else list.style.display = 'none';
-
+        list.style.display = matches.length ? 'block' : 'none';
         matches.forEach(s => {
-            const div = document.createElement('div');
-            div.innerText = s.name;
-            div.onclick = () => {
-                inputEle.value = s.name;
-                inputEle.dataset.id = s.id; 
-                list.style.display = 'none';
-            };
+            const div = document.createElement('div'); div.innerText = s.name;
+            div.onclick = () => { inputEle.value = s.name; inputEle.dataset.id = s.id; list.style.display = 'none'; };
             list.appendChild(div);
         });
     }
 
-    function forceGetStationId(inputEle) {
-        if(inputEle.dataset.id) return inputEle.dataset.id;
-        const match = stations.find(s => s.name.toLowerCase() === inputEle.value.toLowerCase());
-        return match ? match.id : null;
-    }
-
     async function searchTrains() {
-        const depInput = document.getElementById('dep-input');
-        const arrInput = document.getElementById('arr-input');
-        
-        const depId = forceGetStationId(depInput);
-        const arrId = forceGetStationId(arrInput);
-        
-        if (!depId || !arrId) return alert('Veuillez sélectionner des gares valides (Vérifiez l\'orthographe).');
+        try {
+            const depId = forceGetStationId(document.getElementById('dep-input'));
+            const arrId = forceGetStationId(document.getElementById('arr-input'));
+            const dateVal = document.getElementById('date-input').value;
+            
+            if(!depId || !arrId || !dateVal) return alert('Gares ou date invalides.');
+            
+            const startOfDay = new Date(dateVal); startOfDay.setHours(0,0,0,0);
+            const endOfDay = new Date(dateVal); endOfDay.setHours(23,59,59,999);
 
-        document.getElementById('results-header').innerHTML = `Résultats : ${depInput.value} ➔ ${arrInput.value}`;
-        const resContainer = document.getElementById('results-container');
-        resContainer.innerHTML = '<p style="font-weight:600; text-align:center;">Recherche en cours...</p>';
-        
-        let { data, error } = await supabase.from('journeys').select('*, lines(*)').neq('status', 'cancelled');
-        if (error) { resContainer.innerHTML = '<p>Erreur réseau.</p>'; return; }
+            const resContainer = document.getElementById('results-container');
+            resContainer.innerHTML = '<p>Recherche...</p>';
 
-        resContainer.innerHTML = '';
-        if(data && data.length > 0) {
-            data.forEach((journey) => {
-                let badgeClass = journey.lines.train_type.includes('TER') ? 'badge-ter' : (journey.lines.train_type.includes('CITÉ') ? 'badge-cite' : 'badge-tgv');
-                const depDate = new Date(journey.departure_date);
-                const arrDate = new Date(depDate.getTime() + (90 * 60000));
-                let delayInfo = journey.status === 'delayed' ? `<span style="color:#F59E0B; font-weight:bold;">(+${journey.delay_minutes} min)</span>` : '';
+            const { data, error } = await supabase.from('journeys')
+                .select('*, lines(*)')
+                .eq('departure_station_id', depId).eq('arrival_station_id', arrId)
+                .gte('departure_date', startOfDay.toISOString())
+                .lte('departure_date', endOfDay.toISOString())
+                .order('departure_date', { ascending: true });
+
+            if(error) throw error;
+            resContainer.innerHTML = '';
+
+            if(!data || data.length === 0) return resContainer.innerHTML = '<p>Aucun train trouvé.</p>';
+
+            data.forEach(j => {
+                // Calcul Prix Dynamique
+                let finalPrice = j.lines.base_price;
+                if(j.lines.price_type === 'dynamic') {
+                    const daysDiff = (new Date(j.departure_date) - new Date()) / (1000 * 3600 * 24);
+                    if(daysDiff < j.lines.days_before_change) finalPrice = j.lines.late_price;
+                }
+
+                // Statut & Motifs
+                const depDate = new Date(j.departure_date);
+                const arrDate = new Date(depDate.getTime() + (90 * 60000) + (j.delay_minutes * 60000));
+                
+                let isCancelled = j.status === 'cancelled';
+                let statusHtml = '';
+                if(isCancelled) statusHtml = `<div style="color:var(--primary-red); font-weight:bold; margin-bottom:10px;">SUPPRIMÉ - Motif: ${j.motif || 'Non précisé'}</div>`;
+                else if(j.status === 'delayed') statusHtml = `<div style="color:#f59e0b; font-weight:bold; margin-bottom:10px;">RETARD +${j.delay_minutes}min - Motif: ${j.motif || 'Incident'}</div>`;
+
+                // Gestion visuelle des arrêts
+                let addedStopsHtml = '';
+                let addedIds = JSON.parse(j.added_stations || '[]');
+                addedIds.forEach(id => addedStopsHtml += `<div class="track-stop" style="color:var(--primary-green);"><div class="track-dot" style="border-color:var(--primary-green);"></div>Arrêt Exceptionnel<br>${getStationName(id)}</div>`);
 
                 resContainer.innerHTML += `
-                    <div class="result-card">
+                    <div class="result-card" style="${isCancelled ? 'opacity:0.6; pointer-events:none;' : ''}">
+                        ${statusHtml}
                         <div class="result-card-header" style="display:flex; width:100%; align-items:center;">
-                            <div class="train-badge ${badgeClass}">${journey.lines.train_type} <br><small>N°${journey.lines.train_number}</small></div>
+                            <div class="train-badge badge-tgv">${j.lines.train_type} <br><small>N°${j.lines.train_number}</small><br>${j.lines.is_exceptional ? '<span style="color:red">Excep.</span>' : ''}</div>
                             <div class="journey-times">
-                                <div class="time-row"><span class="time-val">${depDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${depInput.value} ${delayInfo}</span></div>
-                                <div class="time-row"><span class="time-val">${arrDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${arrInput.value}</span></div>
+                                <div class="time-row"><span class="time-val" style="${isCancelled ? 'text-decoration:line-through' : ''}">${depDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span><span class="station-val">${getStationName(depId)}</span></div>
+                                <div class="time-row"><span class="time-val" style="${isCancelled ? 'text-decoration:line-through' : ''}">${arrDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span><span class="station-val">${getStationName(arrId)}</span></div>
                             </div>
                             <div class="price-block">
-                                <span class="price-val">${journey.lines.base_price} €</span>
-                                <button class="btn-book" onclick="bookTrain('${journey.id}', '${depId}', '${arrId}', ${journey.lines.base_price})">Réserver</button>
+                                <span class="price-val">${finalPrice} €</span>
+                                <button class="btn-book" onclick="alert('Billet de ${finalPrice}€ enregistré.')">Réserver</button>
                             </div>
                         </div>
                         <div class="timeline-track" style="width:100%;">
-                            <div class="track-stop"><div class="track-dot"></div>DÉPART<br>${depInput.value}</div>
-                            <div class="track-stop"><div class="track-dot" style="border-color:#CBD5E1; background:#F8FAFC;"></div>Passage<br>En transit</div>
-                            <div class="track-stop"><div class="track-dot end"></div>ARRIVÉE<br>${arrInput.value}</div>
+                            <div class="track-stop"><div class="track-dot"></div>DÉPART<br>${getStationName(depId)}</div>
+                            ${addedStopsHtml}
+                            <div class="track-stop"><div class="track-dot end"></div>ARRIVÉE<br>${getStationName(arrId)}</div>
                         </div>
                     </div>
                 `;
             });
-        } else {
-            resContainer.innerHTML = '<p>Aucun train programmé aujourd\'hui.</p>';
-        }
+        } catch(err) { resContainer.innerHTML = '<p>Erreur: ' + err.message + '</p>'; }
     }
-
-    function handleAuth() {
-        const email = prompt("Simulateur de Connexion\nEntrez votre adresse email (ex: jean@mail.com) :");
-        if(email) {
-            localStorage.setItem('monrail_user', email);
-            fakeUserEmail = email;
-            document.getElementById('auth-btn').innerText = email.split('@')[0];
-            alert("Connecté avec succès !");
-        }
-    }
-
-    async function bookTrain(journeyId, depId, arrId, price) {
-        if (!fakeUserEmail) {
-            alert('Vous devez vous identifier pour réserver.');
-            handleAuth();
-            if(!fakeUserEmail) return; 
-        }
-        
-        const numCB = prompt("Paiement MONRail\nMontant : " + price + "€\nEntrez votre numéro de carte (Fictif) :");
-        if(numCB) {
-            const { error } = await supabase.from('tickets').insert([{
-                passenger_name: fakeUserEmail,
-                journey_id: journeyId,
-                departure_station_id: depId,
-                arrival_station_id: arrId,
-                price_paid: price
-            }]);
-
-            if(error) alert("Erreur d'émission : " + error.message);
-            else { alert("Paiement validé !"); openTicketsModal(); }
-        }
-    }
-
-    async function openTicketsModal() {
-        if(!fakeUserEmail) return alert("Veuillez vous connecter d'abord.");
-        
-        const modal = document.getElementById('tickets-modal');
-        const container = document.getElementById('tickets-list-container');
-        modal.style.display = 'flex';
-        container.innerHTML = '<p>Chargement...</p>';
-
-        const { data, error } = await supabase.from('tickets')
-            .select('*, journeys(departure_date, lines(train_type, train_number))')
-            .eq('passenger_name', fakeUserEmail);
-
-        if(error) return container.innerHTML = '<p>Erreur.</p>';
-        
-        container.innerHTML = '';
-        if(data.length === 0) return container.innerHTML = '<p>Aucun billet trouvé.</p>';
-
-        data.forEach(ticket => {
-            const depName = getStationName(ticket.departure_station_id);
-            const arrName = getStationName(ticket.arrival_station_id);
-            const depDate = new Date(ticket.journeys.departure_date);
-            const ticketDivId = `ticket-${ticket.id}`;
-            
-            container.innerHTML += `
-                <div class="result-card" id="${ticketDivId}" style="border: 2px solid var(--primary-green); padding:20px;">
-                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
-                        <strong>MONRail - ${ticket.journeys.lines.train_type} N°${ticket.journeys.lines.train_number}</strong>
-                        <span style="color:gray;">${depDate.toLocaleDateString()}</span>
-                    </div>
-                    <h3 style="margin:5px 0;">${depName} ➔ ${arrName}</h3>
-                    <p style="margin:5px 0;"><strong>Départ :</strong> ${depDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
-                    <p style="margin:5px 0;"><strong>Passager :</strong> ${ticket.passenger_name}</p>
-                </div>
-                <button class="btn-book" style="margin-bottom:25px;" onclick="downloadSpecificPDF('${ticketDivId}')">Télécharger PDF</button>
-            `;
-        });
-    }
-
-    function downloadSpecificPDF(elementId) { html2pdf(document.getElementById(elementId)); }
 
     function searchBoardStation() {
         searchStation(document.getElementById('board-input'), 'board-list');
         document.getElementById('board-list').querySelectorAll('div').forEach(div => {
             const oldClick = div.onclick;
-            div.onclick = () => { oldClick(); loadStationBoard(); }
+            div.onclick = () => { oldClick(); loadStationBoard(document.getElementById('board-input').dataset.id); }
         });
     }
 
-    async function loadStationBoard() {
+    async function loadStationBoard(stationId) {
+        if(!stationId) return;
         const tbody = document.getElementById('board-body');
-        let { data } = await supabase.from('journeys').select('*, lines(*)').limit(5);
-        tbody.innerHTML = '';
-        if(data && data.length > 0) {
-            data.forEach((journey, i) => {
-                const time = new Date(journey.departure_date);
-                time.setMinutes(time.getMinutes() + (i * 15));
-                // L'ERREUR ÉTAIT ICI : apostrophe corrigée en \"
-                let status = journey.status === 'delayed' ? `<span style="color:#F59E0B">Retard</span>` : (journey.status === 'cancelled' ? '<span style="color:red">Supprimé</span>' : '<span style="color:green">À l\'heure</span>');
-                tbody.innerHTML += `<tr><td>${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${journey.lines.train_type} N°${journey.lines.train_number}</td><td>${status}</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="4">Chargement...</td></tr>';
+        
+        try {
+            const now = new Date();
+            const in10Hours = new Date(now.getTime() + (10 * 3600 * 1000));
+
+            // Cherche les trains où la gare est départ OU arrivée
+            const { data, error } = await supabase.from('journeys')
+                .select('*, lines(*)')
+                .or(`departure_station_id.eq.${stationId},arrival_station_id.eq.${stationId}`)
+                .gte('departure_date', now.toISOString())
+                .lte('departure_date', in10Hours.toISOString())
+                .order('departure_date', { ascending: true })
+                .limit(10);
+
+            if(error) throw error;
+            tbody.innerHTML = '';
+            
+            if(!data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="4">Aucun train prévu dans les 10 prochaines heures.</td></tr>';
+
+            data.forEach(j => {
+                const isDeparture = j.departure_station_id === stationId;
+                const time = new Date(j.departure_date);
+                const direction = isDeparture ? `Vers ${getStationName(j.arrival_station_id)}` : `En provenance de ${getStationName(j.departure_station_id)}`;
+                
+                let status = j.status === 'delayed' ? `<span style="color:#f59e0b">Retard (${j.motif})</span>` : (j.status === 'cancelled' ? `<span style="color:red">Supprimé (${j.motif})</span>` : `<span style="color:green">À l'heure</span>`);
+                
+                tbody.innerHTML += `<tr><td>${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${j.lines.train_type}</td><td>${direction}</td><td>${status}</td></tr>`;
             });
-        } else {
-            tbody.innerHTML = '<tr><td colspan="3">Aucun train prévu.</td></tr>';
-        }
+        } catch(err) { tbody.innerHTML = `<tr><td colspan="4">Erreur: ${err.message}</td></tr>`; }
+    }
+
+    function handleAuth() {
+        const email = prompt("Email de connexion:");
+        if(email) { localStorage.setItem('monrail_user', email); location.reload(); }
     }
 </script>
 </body>
