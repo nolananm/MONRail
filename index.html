@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONRail - Client</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- html2pdf pour la génération de billets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+<header>
+    <h1>MON<span>Rail</span></h1>
+    <div>
+        <span id="user-info"></span>
+        <button id="login-btn" onclick="toggleAuth()">Connexion / Inscription</button>
+    </div>
+</header>
+
+<div class="container">
+    <div id="alerts-container"></div>
+
+    <div class="card">
+        <h2>Où souhaitez-vous aller ?</h2>
+        <div class="search-box">
+            <div style="position: relative;">
+                <input type="text" id="dep-input" placeholder="Gare de départ..." onkeyup="searchStation(this, 'dep-list')">
+                <div id="dep-list" class="autocomplete-list"></div>
+            </div>
+            <div style="position: relative;">
+                <input type="text" id="arr-input" placeholder="Gare d'arrivée..." onkeyup="searchStation(this, 'arr-list')">
+                <div id="arr-list" class="autocomplete-list"></div>
+            </div>
+            <input type="date" id="date-input">
+            <button onclick="searchTrains()">Rechercher</button>
+        </div>
+    </div>
+
+    <div id="results-container"></div>
+    
+    <div class="card" id="departures-board">
+        <h2>Tableau des Départs / Arrivées</h2>
+        <input type="text" id="board-input" placeholder="Saisir une gare..." onkeyup="searchStation(this, 'board-list')">
+        <div id="board-list" class="autocomplete-list"></div>
+        <button class="green" onclick="loadBoard()">Voir</button>
+        <div id="board-results"></div>
+    </div>
+</div>
+
+<script>
+    // INITIALISATION SUPABASE (Remplacez par vos clés Supabase)
+    const SUPABASE_URL = 'https://VOTRE_PROJET.supabase.co';
+    const SUPABASE_KEY = 'VOTRE_CLE_ANON';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let stations = [];
+    
+    async function loadStations() {
+        let { data } = await supabase.from('stations').select('*');
+        stations = data || [];
+    }
+    loadStations();
+
+    function searchStation(inputEle, listId) {
+        const val = inputEle.value.toLowerCase();
+        const list = document.getElementById(listId);
+        list.innerHTML = '';
+        if (!val) return;
+        
+        const matches = stations.filter(s => s.name.toLowerCase().includes(val));
+        matches.forEach(s => {
+            const div = document.createElement('div');
+            div.innerText = s.name;
+            div.onclick = () => {
+                inputEle.value = s.name;
+                inputEle.dataset.id = s.id;
+                list.innerHTML = '';
+            };
+            list.appendChild(div);
+        });
+    }
+
+    async function searchTrains() {
+        const depId = document.getElementById('dep-input').dataset.id;
+        const arrId = document.getElementById('arr-input').dataset.id;
+        const resContainer = document.getElementById('results-container');
+        
+        if (!depId || !arrId) {
+            alert('Veuillez sélectionner des gares valides.');
+            return;
+        }
+
+        resContainer.innerHTML = '<p>Recherche en cours...</p>';
+        
+        // Logique simplifiée pour le MVP : on cherche les trajets du jour
+        let { data, error } = await supabase
+            .from('journeys')
+            .select('*, lines(*, line_stops(*, stations(name)))')
+            .eq('status', 'on_time');
+
+        resContainer.innerHTML = '';
+        if(data && data.length > 0) {
+            data.forEach(journey => {
+                // Mockup visuel d'un résultat avec circuit
+                resContainer.innerHTML += `
+                    <div class="card">
+                        <h3>${journey.lines.train_type} n°${journey.lines.train_number} ${journey.lines.is_exceptional ? '<span style="color:red">(Exceptionnel)</span>' : ''}</h3>
+                        <p>Départ prévu : ${new Date(journey.departure_date).toLocaleTimeString()} | Prix estimé : ${journey.lines.base_price} €</p>
+                        <div class="timeline">
+                            <div class="timeline-stop"><div class="timeline-dot"></div>Départ</div>
+                            <div class="timeline-stop"><div class="timeline-dot" style="background:var(--primary-green)"></div>Arrêt intermédiaire</div>
+                            <div class="timeline-stop"><div class="timeline-dot"></div>Arrivée</div>
+                        </div>
+                        <p style="font-size:12px; color:gray;">Billet non remboursable, non échangeable.</p>
+                        <button class="green" onclick="bookTrain('${journey.id}')">Réserver (Paiement Fictif)</button>
+                    </div>
+                `;
+            });
+        } else {
+            resContainer.innerHTML = '<p>Aucun train trouvé pour ce trajet.</p>';
+        }
+    }
+
+    async function bookTrain(journeyId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert('Vous devez créer un compte ou vous connecter pour associer un nom au billet.');
+            // Logique de login fictive pour l'exemple
+            await supabase.auth.signInWithOAuth({ provider: 'github' }); // Ou form email/mdp
+            return;
+        }
+        
+        // Faux paiement
+        const numCB = prompt("Entrez un numéro de carte (Faux système - tout est accepté) :");
+        if(numCB) {
+            alert("Paiement accepté ! Génération du billet...");
+            const ticketHTML = `
+                <div class="ticket" id="print-ticket">
+                    <h2>Billet MONRail</h2>
+                    <p><strong>Passager :</strong> ${session.user.email}</p>
+                    <p><strong>Trajet :</strong> Validé</p>
+                    <p><em>Présentez ce billet (PDF) lors du contrôle.</em></p>
+                </div>
+            `;
+            document.getElementById('results-container').innerHTML = ticketHTML + '<button onclick="downloadPDF()">Télécharger en PDF</button>';
+        }
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('print-ticket');
+        html2pdf(element);
+    }
+</script>
+</body>
+</html>
