@@ -2,33 +2,92 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MONRail - Réservation</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        :root { --red: #D32F2F; --green: #2E7D32; --bg: #f4f5f9; --white: #FFFFFF; --text: #212529; --border: #e2e5ec; }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
+        header { background: var(--white); padding: 0 40px; height: 72px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 26px; font-weight: 800; color: var(--red); text-decoration: none; display: flex; align-items: center; gap: 5px; }
+        .logo span { color: var(--green); }
+        .btn-header { background: transparent; color: var(--text); border: 2px solid var(--border); padding: 8px 20px; border-radius: 50px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-header:hover { border-color: var(--green); color: var(--green); }
+        
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        h1 { text-align: center; font-size: 32px; font-weight: 800; margin-bottom: 40px; color: var(--text); }
+        
+        /* Barre de recherche pilule type SNCF Connect */
+        .search-pill { background: var(--white); border-radius: 50px; padding: 10px; display: flex; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); margin-bottom: 40px; position: relative; }
+        .input-group { flex: 1; position: relative; display: flex; align-items: center; }
+        .input-group input { width: 100%; border: none; padding: 15px 20px; font-size: 16px; font-weight: 600; outline: none; background: transparent; color: var(--text); }
+        .divider { width: 1px; height: 40px; background: var(--border); }
+        .btn-search { background: var(--green); color: var(--white); border: none; padding: 15px 35px; border-radius: 40px; font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-search:hover { background: #1b5e20; }
+        
+        .autocomplete-list { position: absolute; top: 60px; left: 0; width: 100%; background: var(--white); border: 1px solid var(--border); border-radius: 12px; max-height: 250px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .autocomplete-list div { padding: 15px 20px; cursor: pointer; font-weight: 500; border-bottom: 1px solid #f8f9fa; }
+        .autocomplete-list div:hover { background: #f0fdf4; color: var(--green); }
+        
+        /* Cartes de résultats */
+        .result-card { background: var(--white); border-radius: 16px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+        .train-badge { display: inline-block; padding: 6px 12px; border-radius: 6px; font-weight: 800; font-size: 12px; margin-bottom: 15px; }
+        .badge-tgv { background: #ffebee; color: var(--red); }
+        .badge-ter { background: #e8f5e9; color: var(--green); }
+        .badge-cite { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+        
+        .time-row { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+        .time-val { font-size: 24px; font-weight: 800; width: 75px; }
+        .station-val { font-size: 16px; font-weight: 600; color: #495057; }
+        
+        /* Circuit Droit */
+        .timeline { display: flex; justify-content: space-between; position: relative; margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--border); }
+        .timeline::before { content: ''; position: absolute; top: 34px; left: 20px; right: 20px; height: 3px; background: var(--border); z-index: 1; }
+        .timeline-stop { text-align: center; position: relative; z-index: 2; font-size: 12px; font-weight: 600; background: var(--white); padding: 0 5px; color: #6c757d; }
+        .timeline-dot { width: 18px; height: 18px; border-radius: 50%; border: 4px solid #adb5bd; background: var(--white); margin: 0 auto 5px auto; }
+        .dot-green { border-color: var(--green); } .dot-red { border-color: var(--red); }
+        
+        .alert { background: #ffebee; color: var(--red); padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 15px; display: inline-block; width: 100%; border-left: 4px solid var(--red); }
+        .alert-orange { background: #fff3cd; color: #856404; border-color: #856404; }
+        
+        /* Tableau en gare */
+        .board-container { background: #0f172a; color: white; padding: 30px; border-radius: 20px; margin-top: 60px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .board-table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; }
+        .board-table th { color: #94a3b8; padding: 15px 10px; border-bottom: 1px solid #334155; }
+        .board-table td { padding: 15px 10px; font-weight: 600; border-bottom: 1px solid #1e293b; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: var(--white); padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    </style>
 </head>
 <body>
 
 <header>
     <a href="#" class="logo">MON<span>Rail</span></a>
     <div style="display:flex; gap:15px;">
-        <button class="btn-login" onclick="openTickets()">Vos billets</button>
-        <button class="btn-login" id="auth-btn" onclick="handleAuth()">Se connecter</button>
+        <button class="btn-header" onclick="openTickets()">Vos billets (PDF)</button>
+        <button class="btn-header" id="auth-btn" onclick="handleAuth()">Connexion</button>
     </div>
 </header>
 
 <div class="container">
-    <h1 class="title-main">Trouvez facilement votre trajet</h1>
+    <h1>Trouvez facilement votre trajet</h1>
 
-    <div class="search-widget">
+    <div class="search-pill">
         <div class="input-group">
-            <input type="text" id="dep-input" placeholder="Gare de départ" autocomplete="off">
+            <input type="text" id="dep-input" placeholder="Départ..." autocomplete="off">
             <div id="dep-list" class="autocomplete-list"></div>
         </div>
+        <div class="divider"></div>
         <div class="input-group">
-            <input type="text" id="arr-input" placeholder="Gare d'arrivée" autocomplete="off">
+            <input type="text" id="arr-input" placeholder="Arrivée..." autocomplete="off">
             <div id="arr-list" class="autocomplete-list"></div>
         </div>
+        <div class="divider"></div>
         <div class="input-group" style="flex: 0.6;">
             <input type="date" id="date-input">
         </div>
@@ -37,26 +96,25 @@
 
     <div id="results-container"></div>
 
-    <div class="admin-card" style="margin-top:60px; background:#0f172a; color:white;">
-        <h2>Tableau des départs & arrivées (Direct)</h2>
-        <div class="input-group" style="max-width:300px; margin-bottom:20px;">
-            <input type="text" id="board-input" placeholder="Rechercher une gare..." style="background:rgba(255,255,255,0.1); color:white; border-radius:8px;">
+    <div class="board-container">
+        <h2>Départs & Arrivées (Direct)</h2>
+        <div class="input-group" style="background:rgba(255,255,255,0.1); border-radius:8px; max-width:300px;">
+            <input type="text" id="board-input" placeholder="Saisir votre gare..." style="color:white;" autocomplete="off">
             <div id="board-list" class="autocomplete-list" style="color:black;"></div>
         </div>
-        <table style="width:100%; text-align:left; border-collapse:collapse;">
-            <thead><tr style="border-bottom:1px solid #334155;"><th style="padding:10px;">Heure</th><th style="padding:10px;">Train</th><th style="padding:10px;">Statut</th></tr></thead>
-            <tbody id="board-body"><tr><td colspan="3" style="padding:10px;">Sélectionnez une gare.</td></tr></tbody>
+        <table class="board-table">
+            <thead><tr><th>Heure</th><th>Train</th><th>Statut</th></tr></thead>
+            <tbody id="board-body"><tr><td colspan="3">Recherchez une gare pour voir les 10 prochains trains (max 10h).</td></tr></tbody>
         </table>
     </div>
 </div>
 
-<!-- Modal PDF Billet -->
-<div id="ticket-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:white; padding:30px; border-radius:12px; width:90%; max-width:500px; max-height:80vh; overflow-y:auto;">
-        <div id="ticket-content"></div>
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button class="btn-search" onclick="html2pdf(document.getElementById('ticket-content'))">Télécharger PDF</button>
-            <button class="btn-login" onclick="document.getElementById('ticket-modal').style.display='none'">Fermer</button>
+<div class="modal" id="ticket-modal">
+    <div class="modal-content">
+        <h2 style="color:var(--red); margin-top:0;">Vos Réservations</h2>
+        <div id="ticket-list"></div>
+        <div style="text-align:right; margin-top:20px;">
+            <button class="btn-header" onclick="document.getElementById('ticket-modal').style.display='none'">Fermer</button>
         </div>
     </div>
 </div>
@@ -70,7 +128,7 @@
 
     async function init() {
         document.getElementById('date-input').valueAsDate = new Date();
-        const { data } = await db.from('stations').select('*');
+        const { data } = await db.from('stations').select('*').order('name');
         stations = data || [];
         setupAutocomplete('dep-input', 'dep-list');
         setupAutocomplete('arr-input', 'arr-list');
@@ -78,7 +136,7 @@
     }
     init();
 
-    function setupAutocomplete(inputId, listId, callback) {
+    function setupAutocomplete(inputId, listId, callback = null) {
         const input = document.getElementById(inputId);
         const list = document.getElementById(listId);
         input.addEventListener('input', () => {
@@ -99,7 +157,10 @@
         document.addEventListener('click', (e) => { if(e.target !== input) list.style.display = 'none'; });
     }
 
-    function getStationName(id) { return stations.find(s => s.id === id)?.name || 'Inconnu'; }
+    function handleAuth() {
+        const nom = prompt("Création de compte (Obligatoire pour les billets nominatifs).\nEntrez votre Nom et Prénom :");
+        if(nom) { localStorage.setItem('monrail_user', nom); currentUser = nom; document.getElementById('auth-btn').innerText = nom; }
+    }
 
     async function searchTrains() {
         const depId = document.getElementById('dep-input').dataset.id;
@@ -107,13 +168,12 @@
         const dateVal = document.getElementById('date-input').value;
         const res = document.getElementById('results-container');
 
-        if(!depId || !arrId || !dateVal) return alert("Sélectionnez les gares dans les suggestions.");
-        res.innerHTML = '<p style="text-align:center;">Recherche en cours...</p>';
+        if(!depId || !arrId || !dateVal) return alert("Sélectionnez les gares dans la liste déroulante.");
+        res.innerHTML = '<p style="text-align:center; font-weight:600;">Recherche en cours...</p>';
 
         const start = new Date(dateVal); start.setHours(0,0,0,0);
         const end = new Date(dateVal); end.setHours(23,59,59,999);
 
-        // Récupérer toutes les lignes et trajets de la journée
         const { data: lines } = await db.from('lines').select('*');
         const { data: journeys } = await db.from('journeys').select('*').gte('departure_date', start.toISOString()).lte('departure_date', end.toISOString());
 
@@ -127,11 +187,10 @@
             let route = JSON.parse(line.route || '[]');
             let mods = JSON.parse(j.modified_stops || '{"added":[], "skipped":[]}');
             
-            // Appliquer les modifs exceptionnelles
+            // Gestion des arrêts exceptionnels
             route = route.filter(s => !mods.skipped.includes(s.id));
             mods.added.forEach(add => route.push(add));
-            // Pour simplifier l'affichage du circuit, on trie par temps (les ajouts doivent avoir un temps valide)
-            route.sort((a,b) => a.offset - b.offset); 
+            route.sort((a,b) => a.offset - b.offset);
 
             const idxDep = route.findIndex(s => s.id === depId);
             const idxArr = route.findIndex(s => s.id === arrId);
@@ -140,80 +199,71 @@
                 found = true;
                 const baseTime = new Date(j.departure_date);
                 const depTime = new Date(baseTime.getTime() + (route[idxDep].offset * 60000));
-                const arrTime = new Date(baseTime.getTime() + (route[idxArr].offset * 60000));
+                const arrTime = new Date(baseTime.getTime() + (route[idxArr].offset * 60000) + (j.delay_minutes * 60000)); // Inclut le retard à l'arrivée
                 
-                // Calcul Prix
+                // Tarification dynamique
                 let price = line.base_price;
                 if(line.price_type === 'dynamic') {
                     const daysDiff = (baseTime - new Date()) / (1000*3600*24);
                     if(daysDiff < line.days_advance) price = line.late_price;
                 }
 
-                // Alertes
+                let badge = line.train_type.includes('TGV') ? 'badge-tgv' : (line.train_type.includes('TER') ? 'badge-ter' : 'badge-cite');
                 let alertHtml = '';
                 let opacity = '1';
-                if(j.status === 'cancelled') { alertHtml = `<div class="alert-box">TRAIN SUPPRIMÉ : ${j.motif} - Renseignez-vous en gare.</div>`; opacity = '0.6'; }
-                else if(j.status === 'delayed') alertHtml = `<div class="alert-box" style="background:#fff3cd; color:#856404; border-color:#856404;">RETARD ESTIMÉ (+${j.delay_minutes}min) : ${j.motif}</div>`;
-                if(line.is_exceptional) alertHtml += `<div class="alert-box" style="background:#e3f2fd; color:#0c5460; border-color:#0c5460;">TRAJET EXCEPTIONNEL</div>`;
+                
+                if(j.status === 'cancelled') { alertHtml = `<div class="alert">SUPPRIMÉ : ${j.motif}</div>`; opacity = '0.5'; }
+                else if(j.status === 'delayed') alertHtml = `<div class="alert alert-orange">RETARD (+${j.delay_minutes}min) : ${j.motif}</div>`;
+                if(line.is_exceptional) alertHtml += `<div class="alert alert-orange" style="background:#e3f2fd; color:#0284c7; border-color:#0284c7;">LIGNE EXCEPTIONNELLE</div>`;
 
-                // Construction Circuit Droit
-                let circuitHtml = '';
+                // Génération du Circuit Droit
+                let circuit = '';
                 for(let i=idxDep; i<=idxArr; i++) {
                     let t = new Date(baseTime.getTime() + (route[i].offset * 60000) + (j.delay_minutes * 60000));
                     let dotClass = 'timeline-dot';
-                    if(i === idxDep) dotClass += ' dot-green';
-                    if(i === idxArr) dotClass += ' dot-red';
+                    let label = route[i].name;
+                    if(i === idxDep) { dotClass += ' dot-green'; label = `<b>DÉPART</b><br>${route[i].name}`; }
+                    if(i === idxArr) { dotClass += ' dot-red'; label = `<b>ARRIVÉE</b><br>${route[i].name}`; }
                     
-                    let excep = mods.added.find(a => a.id === route[i].id) ? '<br><span style="color:var(--green); font-size:10px;">Arrêt Excep.</span>' : '';
-                    circuitHtml += `<div class="timeline-stop"><div class="${dotClass}"></div>${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}<br>${route[i].name}${excep}</div>`;
+                    let isExcep = mods.added.find(a => a.id === route[i].id) ? '<br><span style="color:var(--green);">Arrêt Excep.</span>' : '';
+                    circuit += `<div class="timeline-stop"><div class="${dotClass}"></div>${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}<br>${label}${isExcep}</div>`;
                 }
 
                 res.innerHTML += `
-                    <div class="result-card" style="opacity:${opacity}">
+                    <div class="result-card" style="opacity:${opacity};">
                         ${alertHtml}
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
-                                <span class="train-badge badge-tgv">${line.train_type} N°${line.train_number}</span>
-                                <div style="margin-top:15px; display:flex; gap:20px; align-items:center;">
-                                    <div><strong style="font-size:20px;">${depTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</strong> <span style="color:var(--text-muted);">${getStationName(depId)}</span></div>
-                                    <div>➔</div>
-                                    <div><strong style="font-size:20px;">${arrTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</strong> <span style="color:var(--text-muted);">${getStationName(arrId)}</span></div>
-                                </div>
+                                <span class="train-badge ${badge}">${line.train_type} N°${line.train_number}</span>
+                                <div class="time-row"><span class="time-val" style="${j.status==='cancelled'?'text-decoration:line-through':''}">${depTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span> <span class="station-val">${document.getElementById('dep-input').value}</span></div>
+                                <div class="time-row"><span class="time-val" style="${j.status==='cancelled'?'text-decoration:line-through':''}">${arrTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span> <span class="station-val">${document.getElementById('arr-input').value}</span></div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:24px; font-weight:800; margin-bottom:10px;">${price} €</div>
-                                <button class="btn-search" style="margin:0;" onclick="bookTrain('${j.id}', ${price}, '${j.status}')" ${j.status==='cancelled'?'disabled':''}>Réserver</button>
+                                <div style="font-size:32px; font-weight:800; margin-bottom:15px; color:var(--text);">${price} €</div>
+                                <button class="btn-search" onclick="bookTrain('${j.id}', ${price}, '${j.status}')" ${j.status==='cancelled'?'disabled style="background:gray;"':''}>Réserver</button>
                             </div>
                         </div>
-                        <div class="timeline">${circuitHtml}</div>
-                        <p style="font-size:12px; color:gray; text-align:center; margin-top:20px; margin-bottom:0;">Billet non remboursable ni échangeable.</p>
+                        <div class="timeline">${circuit}</div>
+                        <div style="text-align:center; font-size:12px; color:var(--text-muted); margin-top:20px;">Billet non remboursable, non échangeable.</div>
                     </div>
                 `;
             }
         });
-
-        if(!found) res.innerHTML = '<p style="text-align:center;">Aucun train trouvé pour ce trajet.</p>';
-    }
-
-    function handleAuth() {
-        const nom = prompt("Création de compte obligatoire avant réservation.\nSaisissez votre Nom et Prénom :");
-        if(nom) { localStorage.setItem('monrail_user', nom); currentUser = nom; document.getElementById('auth-btn').innerText = nom; }
+        if(!found) res.innerHTML = '<p style="text-align:center; font-weight:600;">Aucun train trouvé.</p>';
     }
 
     async function bookTrain(jId, price, status) {
         if(status === 'cancelled') return;
-        if(!currentUser) { alert("Vous devez vous connecter ou créer un compte pour mettre un nom sur le billet."); handleAuth(); if(!currentUser) return; }
-        
-        const cb = prompt(`Paiement de ${price}€\nSystème Fictif MONRail : Entrez n'importe quel numéro de carte pour valider :`);
+        if(!currentUser) { alert("Veuillez vous connecter pour que le billet soit à votre nom."); handleAuth(); if(!currentUser) return; }
+        const cb = prompt(`Paiement de ${price}€\nFaux système de paiement : Entrez n'importe quel numéro pour valider :`);
         if(cb) {
-            const { error } = await db.from('tickets').insert([{ passenger_name: currentUser, journey_id: jId }]);
-            if(!error) { alert("Paiement validé ! Retrouvez le billet dans votre espace."); openTickets(); }
-            else alert("Erreur : " + error.message);
+            await db.from('tickets').insert([{ passenger_name: currentUser, journey_id: jId, price_paid: price }]);
+            alert("Paiement accepté ! Retrouvez le billet dans votre espace."); openTickets();
         }
     }
 
-    async function loadBoard(stationId) {
-        if(!stationId) return;
+    async function loadBoard(stId) {
+        if(!stId) return;
         const tbody = document.getElementById('board-body');
         tbody.innerHTML = '<tr><td colspan="3">Chargement...</td></tr>';
         
@@ -223,56 +273,50 @@
         const { data: lines } = await db.from('lines').select('*');
         const { data: journeys } = await db.from('journeys').select('*').gte('departure_date', now.toISOString()).lte('departure_date', future.toISOString()).order('departure_date');
 
-        let html = '';
-        let count = 0;
-
+        let html = ''; let count = 0;
         journeys.forEach(j => {
             if(count >= 10) return;
             const line = lines.find(l => l.id === j.line_id);
             if(!line) return;
-            
             let route = JSON.parse(line.route || '[]');
-            const idx = route.findIndex(s => s.id === stationId);
+            const idx = route.findIndex(s => s.id === stId);
             
             if(idx !== -1) {
-                const t = new Date(new Date(j.departure_date).getTime() + (route[idx].offset * 60000));
-                let status = j.status === 'delayed' ? `<span style="color:#f59e0b">Retard</span>` : (j.status === 'cancelled' ? `<span style="color:red">Supprimé</span>` : `<span style="color:green">À l'heure</span>`);
-                html += `<tr style="border-bottom:1px solid #334155;">
-                    <td style="padding:10px;">${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
-                    <td style="padding:10px;">${line.train_type} N°${line.train_number}</td>
-                    <td style="padding:10px;">${status}</td>
-                </tr>`;
+                const t = new Date(new Date(j.departure_date).getTime() + (route[idx].offset * 60000) + (j.delay_minutes * 60000));
+                let status = j.status === 'delayed' ? `<span style="color:#f59e0b;">Retard</span>` : (j.status === 'cancelled' ? `<span style="color:var(--red);">Supprimé</span>` : `<span style="color:#22c55e;">À l'heure</span>`);
+                html += `<tr><td>${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${line.train_type} N°${line.train_number}</td><td>${status}</td></tr>`;
                 count++;
             }
         });
-
-        tbody.innerHTML = html || '<tr><td colspan="3">Aucun train prévu.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="3">Aucun train prévu dans les 10 prochaines heures.</td></tr>';
     }
 
     async function openTickets() {
-        if(!currentUser) return alert("Veuillez vous connecter.");
+        if(!currentUser) return alert("Connectez-vous.");
+        document.getElementById('ticket-modal').style.display = 'flex';
+        const list = document.getElementById('ticket-list');
+        list.innerHTML = 'Chargement...';
+        
         const { data: tickets } = await db.from('tickets').select('*, journeys(departure_date, lines(*))').eq('passenger_name', currentUser);
-        
-        const content = document.getElementById('ticket-content');
-        content.innerHTML = '<h2 style="color:var(--red); margin-top:0;">Vos Billets MONRail</h2>';
-        
-        if(!tickets || tickets.length === 0) content.innerHTML += '<p>Aucun billet.</p>';
+        list.innerHTML = '';
+        if(!tickets || tickets.length === 0) return list.innerHTML = 'Aucun billet.';
         
         tickets.forEach(t => {
             const j = t.journeys;
             const d = new Date(j.departure_date);
-            content.innerHTML += `
-                <div style="border: 2px dashed var(--green); padding:20px; margin-bottom:15px; border-radius:8px;">
-                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
-                        <strong>${j.lines.train_type} N°${j.lines.train_number}</strong>
+            const ticketId = `pdf-${t.id}`;
+            list.innerHTML += `
+                <div id="${ticketId}" style="border: 2px dashed var(--green); padding:20px; border-radius:12px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+                        <strong style="color:var(--green);">${j.lines.train_type} N°${j.lines.train_number}</strong>
                         <span>${d.toLocaleDateString()}</span>
                     </div>
-                    <p><strong>Passager :</strong> ${t.passenger_name.toUpperCase()}</p>
-                    <p style="font-size:12px; color:gray; text-align:center; margin-top:20px;">Billet nominatif, non remboursable, non échangeable.<br>Généré le ${new Date(t.booking_date).toLocaleDateString()}</p>
+                    <p style="margin:5px 0;"><strong>Passager :</strong> ${t.passenger_name}</p>
+                    <p style="font-size:12px; color:gray; text-align:center; margin-top:20px;">Billet nominatif, non remboursable, non échangeable.</p>
                 </div>
+                <button class="btn-search" style="width:100%; margin-bottom:20px; border-radius:8px;" onclick="html2pdf(document.getElementById('${ticketId}'))">Télécharger en PDF</button>
             `;
         });
-        document.getElementById('ticket-modal').style.display = 'flex';
     }
 </script>
 </body>
