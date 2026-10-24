@@ -1,0 +1,145 @@
+:root {
+    --primary-red: #D32F2F;
+    --primary-green: #2E7D32;
+    --bg-white: #F8F9FA;
+    --text-dark: #212529;
+    --card-bg: #FFFFFF;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-white);
+    color: var(--text-dark);
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: var(--card-bg);
+    border-bottom: 4px solid var(--primary-red);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+header h1 {
+    margin: 0;
+    color: var(--primary-red);
+    font-weight: 800;
+}
+
+header h1 span {
+    color: var(--primary-green);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+input, select, button {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    margin: 5px 0;
+}
+
+button {
+    background-color: var(--primary-red);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+button:hover { background-color: #b71c1c; }
+button.green { background-color: var(--primary-green); }
+button.green:hover { background-color: #1b5e20; }
+
+.search-box {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.autocomplete-list {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    max-height: 150px;
+    overflow-y: auto;
+    width: 200px;
+    z-index: 1000;
+}
+
+.autocomplete-list div {
+    padding: 10px;
+    cursor: pointer;
+}
+.autocomplete-list div:hover {
+    background-color: var(--bg-white);
+}
+
+.alert {
+    background-color: #ffebee;
+    color: var(--primary-red);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border-left: 5px solid var(--primary-red);
+}
+
+.timeline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+.timeline-stop {
+    text-align: center;
+    font-size: 12px;
+    position: relative;
+    padding: 0 15px;
+}
+.timeline-stop::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--primary-green);
+    z-index: 1;
+}
+.timeline-stop:first-child::before { display: none; }
+.timeline-dot {
+    width: 12px; height: 12px;
+    background: var(--primary-red);
+    border-radius: 50%;
+    margin: 0 auto 5px auto;
+    position: relative;
+    z-index: 2;
+}
+
+.ticket {
+    border: 2px dashed var(--primary-green);
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
