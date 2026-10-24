@@ -2,238 +2,205 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>MONRail - Gestion Centrale</title>
-    <link rel="stylesheet" href="style.css?v=6">
+    <title>MONRail - Espace Agent</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .admin-section { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        .admin-section h2 { margin-top: 0; color: #0f172a; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
-        select, input[type="text"], input[type="number"], input[type="date"], input[type="time"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
-        button { background: #059669; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-        button:hover { background: #047857; }
-        .danger-btn { background: #e11d48; }
-        .danger-btn:hover { background: #be123c; }
-        .row { display: flex; gap: 15px; }
+        .admin-section { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .row { display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end; }
         .col { flex: 1; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        button { background: #059669; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .autocomplete-wrapper { position: relative; width: 100%; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; }
+        .autocomplete-list div { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .autocomplete-list div:hover { background: #f0fdf4; color: #059669; }
+        .stop-item { display:flex; gap:10px; background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:10px; align-items:center; }
     </style>
 </head>
-<body style="background: #f8fafc; font-family: sans-serif; padding: 20px;">
+<body style="background: #f1f5f9; font-family: sans-serif; padding: 20px;">
 
-<div style="max-width: 900px; margin: 0 auto;">
+<div style="max-width: 1000px; margin: 0 auto;">
     <h1 style="color: #e11d48;">MONRail <span style="color: #059669;">Admin</span></h1>
 
-    <!-- ETAPE 1 : LES GARES -->
+    <!-- GARES -->
     <div class="admin-section">
-        <h2>1. Gérer les Gares</h2>
-        <div class="row" style="align-items: flex-end;">
-            <div class="col">
-                <label>Nom de la nouvelle gare</label>
-                <input type="text" id="new-station" placeholder="Ex: Paris Gare de Lyon">
-            </div>
-            <button onclick="addStation()">Enregistrer la gare</button>
+        <h2>1. Infrastructure (Gares)</h2>
+        <div class="row">
+            <div class="col"><label>Nouvelle Gare</label><input type="text" id="new-station" placeholder="Nom complet de la gare"></div>
+            <button onclick="addStation()">Ajouter</button>
         </div>
-        <p style="font-size:12px; color:gray; margin-top:10px;" id="stations-count">Chargement des gares...</p>
     </div>
 
-    <!-- ETAPE 2 : LES LIGNES -->
-    <div class="admin-section" style="border-left: 4px solid #3b82f6;">
-        <h2>2. Créer un modèle de Ligne</h2>
-        <div class="row form-group">
-            <div class="col">
-                <label>Type de train</label>
-                <select id="line-type">
-                    <option value="MONRail TGV">MONRail TGV</option>
-                    <option value="MONRail TER">MONRail TER</option>
-                    <option value="MONRail CITÉ">MONRail CITÉ</option>
-                </select>
-            </div>
-            <div class="col">
-                <label>Prix de base (€)</label>
-                <input type="number" id="line-price" placeholder="Ex: 45">
-            </div>
-        </div>
-        <div class="row form-group">
-            <div class="col">
-                <label>Gare de Départ</label>
-                <select id="line-dep"></select>
-            </div>
-            <div class="col">
-                <label>Gare d'Arrivée</label>
-                <select id="line-arr"></select>
-            </div>
-        </div>
-        <button style="background: #3b82f6;" onclick="createLine()">Créer la ligne (N° auto)</button>
-    </div>
-
-    <!-- ETAPE 3 : PROGRAMMATION & DUPLICATION -->
+    <!-- CREATION TRAJET COMPLET -->
     <div class="admin-section" style="border-left: 4px solid #059669;">
-        <h2>3. Programmation & Calendrier</h2>
-        <div class="form-group">
-            <label>Sélectionner la ligne à programmer</label>
-            <select id="plan-line"></select>
+        <h2>2. Créer un Trajet (Horaires précis)</h2>
+        
+        <div class="row">
+            <div class="col"><label>Train</label><select id="j-type"><option>MONRail TGV</option><option>MONRail TER</option></select></div>
+            <div class="col"><label>Numéro</label><input type="text" id="j-num" placeholder="Ex: 8402"></div>
+            <div class="col"><label>Prix (€)</label><input type="number" id="j-price" placeholder="45"></div>
+        </div>
+
+        <div class="row">
+            <div class="col autocomplete-wrapper">
+                <label>Gare de Départ</label>
+                <input type="text" id="j-dep-station" placeholder="Saisir la gare...">
+                <div id="list-dep" class="autocomplete-list"></div>
+            </div>
+            <div class="col"><label>Heure Départ</label><input type="datetime-local" id="j-dep-time"></div>
+        </div>
+
+        <div style="background:#e2e8f0; padding:15px; border-radius:8px; margin-bottom:15px;">
+            <label>Arrêts Intermédiaires</label>
+            <div id="stops-container"></div>
+            <div class="row" style="margin-bottom:0;">
+                <div class="col autocomplete-wrapper">
+                    <input type="text" id="stop-station" placeholder="Gare d'arrêt...">
+                    <div id="list-stop" class="autocomplete-list"></div>
+                </div>
+                <div class="col"><input type="datetime-local" id="stop-arr-time" title="Heure d'arrivée"></div>
+                <div class="col"><input type="datetime-local" id="stop-dep-time" title="Heure de départ"></div>
+                <button style="background:#3b82f6;" onclick="addStop()">Ajouter Arrêt</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col autocomplete-wrapper">
+                <label>Gare d'Arrivée</label>
+                <input type="text" id="j-arr-station" placeholder="Saisir la gare...">
+                <div id="list-arr" class="autocomplete-list"></div>
+            </div>
+            <div class="col"><label>Heure Arrivée</label><input type="datetime-local" id="j-arr-time"></div>
         </div>
         
-        <div class="row form-group">
-            <div class="col">
-                <label>Période - Du :</label>
-                <input type="date" id="plan-start">
-            </div>
-            <div class="col">
-                <label>Au :</label>
-                <input type="date" id="plan-end">
-            </div>
-            <div class="col">
-                <label>Heure de départ :</label>
-                <input type="time" id="plan-time">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Jours de circulation (Duplication automatique)</label>
-            <div style="display:flex; gap:15px; margin-top:10px;">
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="1" checked> Lun</label>
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="2" checked> Mar</label>
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="3" checked> Mer</label>
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="4" checked> Jeu</label>
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="5" checked> Ven</label>
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="6" checked> Sam</label>
-                <label style="font-weight:normal;"><input type="checkbox" class="plan-days" value="0" checked> Dim</label>
-            </div>
-        </div>
-        <button onclick="scheduleJourneys()">Mettre en circulation</button>
+        <button style="width:100%;" onclick="createJourney()">Enregistrer le Trajet Complet</button>
     </div>
 
-    <!-- ETAPE 4 : INCIDENTS -->
-    <div class="admin-section" style="border-left: 4px solid #e11d48;">
-        <h2>4. Contrôle du trafic (Modifications Exceptionnelles)</h2>
-        <div class="form-group">
-            <label>Sélectionner un trajet programmé</label>
-            <select id="mod-journey"></select>
-        </div>
-        <div class="row form-group">
-            <div class="col">
-                <label>Nouveau Statut</label>
-                <select id="mod-status">
-                    <option value="on_time">Remettre à l'heure</option>
-                    <option value="delayed">Déclarer un retard</option>
-                    <option value="cancelled">Supprimer le train</option>
-                </select>
-            </div>
-            <div class="col">
-                <label>Temps de retard (min)</label>
-                <input type="number" id="mod-delay" placeholder="0">
-            </div>
-            <div class="col">
-                <label>Motif pour les clients</label>
-                <input type="text" id="mod-motif" placeholder="Ex: Panne électrique">
-            </div>
-        </div>
-        <button class="danger-btn" onclick="updateJourney()">Appliquer la modification</button>
+    <!-- DUPLICATION -->
+    <div class="admin-section" style="border-left: 4px solid #3b82f6;">
+        <h2>3. Dupliquer un Trajet (Changer la date)</h2>
+        <div id="journeys-list" style="max-height:300px; overflow-y:auto; border:1px solid #ccc; padding:10px; border-radius:8px;"></div>
     </div>
 </div>
 
 <script>
     const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
-    let stations = [], lines = [], journeys = [];
+    let stations = [], stopsArray = [];
 
-    async function loadData() {
-        // Gares
-        const { data: st } = await db.from('stations').select('*').order('name');
-        stations = st || [];
-        document.getElementById('stations-count').innerText = `${stations.length} gares enregistrées en base.`;
+    async function init() {
+        const { data } = await db.from('stations').select('*');
+        stations = data || [];
         
-        let stationOptions = '<option value="">-- Choisir une gare --</option>';
-        stations.forEach(s => stationOptions += `<option value="${s.id}">${s.name}</option>`);
-        document.getElementById('line-dep').innerHTML = stationOptions;
-        document.getElementById('line-arr').innerHTML = stationOptions;
-
-        // Lignes
-        const { data: ln } = await db.from('lines').select('*');
-        lines = ln || [];
-        let lineOptions = '<option value="">-- Choisir une ligne --</option>';
-        lines.forEach(l => {
-            const dep = stations.find(s => s.id === l.departure_station_id)?.name || 'Inconnu';
-            const arr = stations.find(s => s.id === l.arrival_station_id)?.name || 'Inconnu';
-            lineOptions += `<option value="${l.id}">${l.train_type} N°${l.train_number} (${dep} ➔ ${arr}) - ${l.base_price}€</option>`;
-        });
-        document.getElementById('plan-line').innerHTML = lineOptions;
-
-        // Trajets pour modifications
-        const today = new Date(); today.setHours(0,0,0,0);
-        const { data: jn } = await db.from('journeys').select('*, lines(*)').gte('departure_date', today.toISOString()).order('departure_date');
-        journeys = jn || [];
-        let journeyOptions = '<option value="">-- Choisir un train programmé --</option>';
-        journeys.forEach(j => {
-            const d = new Date(j.departure_date);
-            const dep = stations.find(s => s.id === j.lines.departure_station_id)?.name || '';
-            const arr = stations.find(s => s.id === j.lines.arrival_station_id)?.name || '';
-            journeyOptions += `<option value="${j.id}">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - N°${j.lines.train_number} (${dep} ➔ ${arr})</option>`;
-        });
-        document.getElementById('mod-journey').innerHTML = journeyOptions;
+        setupAutocomplete('j-dep-station', 'list-dep');
+        setupAutocomplete('j-arr-station', 'list-arr');
+        setupAutocomplete('stop-station', 'list-stop');
+        
+        loadJourneys();
     }
-    
-    // Chargement initial
-    loadData();
+    init();
+
+    function setupAutocomplete(inputId, listId) {
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+        input.addEventListener('input', () => {
+            const val = input.value.toLowerCase();
+            list.innerHTML = '';
+            if(!val) return list.style.display = 'none';
+            const matches = stations.filter(s => s.name.toLowerCase().includes(val));
+            list.style.display = matches.length ? 'block' : 'none';
+            matches.forEach(s => {
+                const div = document.createElement('div'); div.innerText = s.name;
+                div.onclick = () => { input.value = s.name; input.dataset.id = s.id; list.style.display = 'none'; };
+                list.appendChild(div);
+            });
+        });
+        document.addEventListener('click', (e) => { if(e.target !== input) list.style.display = 'none'; });
+    }
 
     async function addStation() {
         const name = document.getElementById('new-station').value;
-        if(!name) return alert("Saisissez un nom.");
-        const { error } = await db.from('stations').insert([{ name }]);
-        if(error) alert(error.message); else { document.getElementById('new-station').value = ''; loadData(); alert("Gare sauvegardée !"); }
+        if(!name) return;
+        await db.from('stations').insert([{ name }]);
+        document.getElementById('new-station').value = '';
+        init(); alert("Gare ajoutée !");
     }
 
-    async function createLine() {
-        const type = document.getElementById('line-type').value;
-        const price = document.getElementById('line-price').value;
-        const dep = document.getElementById('line-dep').value;
-        const arr = document.getElementById('line-arr').value;
+    function addStop() {
+        const input = document.getElementById('stop-station');
+        const arrTime = document.getElementById('stop-arr-time').value;
+        const depTime = document.getElementById('stop-dep-time').value;
         
-        if(!price || !dep || !arr) return alert("Remplissez tous les champs de la ligne.");
-        if(dep === arr) return alert("Le départ et l'arrivée doivent être différents.");
-
-        const num = Math.floor(100000 + Math.random() * 900000).toString();
-        const { error } = await db.from('lines').insert([{ train_number: num, train_type: type, base_price: price, departure_station_id: dep, arrival_station_id: arr }]);
-        if(error) alert(error.message); else { loadData(); alert(`Ligne N°${num} créée.`); }
+        if(!input.dataset.id || !arrTime || !depTime) return alert("Remplissez la gare et les deux horaires.");
+        
+        stopsArray.push({ id: input.dataset.id, name: input.value, arrival: arrTime, departure: depTime });
+        document.getElementById('stops-container').innerHTML += `<div class="stop-item"><strong>${input.value}</strong> | Arrivée: ${arrTime.replace('T',' ')} | Départ: ${depTime.replace('T',' ')}</div>`;
+        input.value = ''; input.dataset.id = ''; document.getElementById('stop-arr-time').value = ''; document.getElementById('stop-dep-time').value = '';
     }
 
-    async function scheduleJourneys() {
-        const lineId = document.getElementById('plan-line').value;
-        const start = new Date(document.getElementById('plan-start').value);
-        const end = new Date(document.getElementById('plan-end').value);
-        const time = document.getElementById('plan-time').value.split(':');
-        
-        if(!lineId || isNaN(start) || isNaN(end) || time.length < 2) return alert("Veuillez remplir correctement les dates et l'heure.");
+    async function createJourney() {
+        const type = document.getElementById('j-type').value;
+        const num = document.getElementById('j-num').value;
+        const price = document.getElementById('j-price').value;
+        const depId = document.getElementById('j-dep-station').dataset.id;
+        const depTime = document.getElementById('j-dep-time').value;
+        const arrId = document.getElementById('j-arr-station').dataset.id;
+        const arrTime = document.getElementById('j-arr-time').value;
 
-        const checkboxes = document.querySelectorAll('.plan-days:checked');
-        const allowedDays = Array.from(checkboxes).map(cb => parseInt(cb.value));
-        
-        let inserts = [];
-        for(let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            if(allowedDays.includes(d.getDay())) {
-                let depDate = new Date(d);
-                depDate.setHours(time[0], time[1], 0);
-                inserts.push({ line_id: lineId, departure_date: depDate.toISOString() });
-            }
-        }
+        if(!num || !price || !depId || !depTime || !arrId || !arrTime) return alert("Informations incomplètes.");
 
-        if(inserts.length === 0) return alert("Aucune date ne correspond aux jours sélectionnés.");
+        const { error } = await db.from('journeys').insert([{
+            train_number: num, train_type: type, base_price: price,
+            departure_station_id: depId, arrival_station_id: arrId,
+            departure_time: depTime, arrival_time: arrTime,
+            stops: JSON.stringify(stopsArray)
+        }]);
 
-        const { error } = await db.from('journeys').insert(inserts);
-        if(error) alert(error.message); else { loadData(); alert(`${inserts.length} départs programmés avec succès.`); }
+        if(error) alert(error.message);
+        else { alert("Trajet enregistré."); stopsArray = []; document.getElementById('stops-container').innerHTML = ''; loadJourneys(); }
     }
 
-    async function updateJourney() {
-        const id = document.getElementById('mod-journey').value;
-        const status = document.getElementById('mod-status').value;
-        const delay = document.getElementById('mod-delay').value || 0;
-        const motif = document.getElementById('mod-motif').value;
+    async function loadJourneys() {
+        const { data } = await db.from('journeys').select('*').order('departure_time', {ascending: false}).limit(20);
+        const list = document.getElementById('journeys-list');
+        list.innerHTML = '';
+        if(!data) return;
+        data.forEach(j => {
+            const depName = stations.find(s => s.id === j.departure_station_id)?.name;
+            const arrName = stations.find(s => s.id === j.arrival_station_id)?.name;
+            const depTime = new Date(j.departure_time).toLocaleString();
+            list.innerHTML += `
+                <div class="row stop-item" style="justify-content:space-between; align-items:center;">
+                    <div><strong>${j.train_type} N°${j.train_number}</strong> | ${depName} ➔ ${arrName}<br><small>Départ : ${depTime}</small></div>
+                    <button style="background:#f59e0b;" onclick="duplicateJourney('${j.id}')">Dupliquer (+24h)</button>
+                </div>
+            `;
+        });
+    }
 
-        if(!id) return alert("Sélectionnez un trajet.");
+    async function duplicateJourney(id) {
+        const { data: j } = await db.from('journeys').select('*').eq('id', id).single();
+        if(!j) return;
         
-        const { error } = await db.from('journeys').update({ status, delay_minutes: delay, motif }).eq('id', id);
-        if(error) alert(error.message); else { loadData(); alert("Modification appliquée aux clients en temps réel."); }
+        // Ajoute 24h à tous les horaires
+        const add24h = (isoString) => { const d = new Date(isoString); d.setDate(d.getDate() + 1); return d.toISOString(); };
+        
+        const newStops = JSON.parse(j.stops).map(stop => ({
+            ...stop,
+            arrival: add24h(stop.arrival),
+            departure: add24h(stop.departure)
+        }));
+
+        delete j.id; // Retire l'ID pour créer une nouvelle entrée
+        j.departure_time = add24h(j.departure_time);
+        j.arrival_time = add24h(j.arrival_time);
+        j.stops = JSON.stringify(newStops);
+
+        await db.from('journeys').insert([j]);
+        alert("Trajet dupliqué pour le lendemain avec succès !");
+        loadJourneys();
     }
 </script>
 </body>
