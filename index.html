@@ -2,189 +2,169 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>MONRail - Réservation</title>
+    <title>MONRail</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: sans-serif; background: #f8fafc; margin: 0; color: #0f172a; }
-        header { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
-        .logo { font-size: 24px; font-weight: 900; color: #0f172a; text-decoration: none; }
-        .logo span { color: #e11d48; }
-        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
-        .search-box { background: white; padding: 20px; border-radius: 99px; display: flex; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; }
-        .input-group { flex: 1; position: relative; }
-        .input-group input { width: 100%; border: none; outline: none; font-size: 16px; font-weight: bold; padding: 10px; background: transparent; box-sizing: border-box; }
-        .autocomplete-list { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; }
-        .autocomplete-list div { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .autocomplete-list div:hover { background: #f0fdf4; color: #059669; }
-        button { background: #059669; color: white; border: none; padding: 15px 30px; border-radius: 99px; font-weight: bold; cursor: pointer; }
-        .result-card { background: white; border-radius: 16px; padding: 25px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
-        .timeline { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; position: relative; }
-        .stop { text-align: center; font-size: 13px; font-weight: bold; color: #64748b; z-index: 2; position: relative; }
-        .dot { width: 14px; height: 14px; background: white; border: 4px solid #cbd5e1; border-radius: 50%; margin: 0 auto 8px auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 15px; border-bottom: 1px solid #334155; }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-
 <header>
     <a href="#" class="logo">MON<span>Rail</span></a>
+    <div>
+        <button onclick="handleAuth()" id="auth-btn">Connexion</button>
+        <button onclick="showTickets()">Vos Billets (PDF)</button>
+    </div>
 </header>
 
 <div class="container">
-    <div class="search-box">
-        <div class="input-group">
-            <input type="text" id="dep-input" placeholder="Gare de départ">
-            <div id="dep-list" class="autocomplete-list"></div>
-        </div>
-        <div class="input-group">
-            <input type="text" id="arr-input" placeholder="Gare d'arrivée">
-            <div id="arr-list" class="autocomplete-list"></div>
-        </div>
-        <div class="input-group" style="flex:0.5;"><input type="date" id="date-input"></div>
+    <div class="card" style="display:flex; gap:10px;">
+        <select id="dep"></select> <select id="arr"></select> <input type="date" id="date">
         <button onclick="searchTrains()">Rechercher</button>
     </div>
 
-    <div id="results" style="margin-top: 40px;"></div>
+    <div id="results"></div>
 
-    <div style="background: #0f172a; color: white; padding: 30px; border-radius: 20px; margin-top: 60px;">
-        <h2>Horaires en gare (Départs et Arrivées)</h2>
-        <div class="input-group" style="max-width: 400px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 20px;">
-            <input type="text" id="board-input" placeholder="Saisir votre gare..." style="color:white;">
-            <div id="board-list" class="autocomplete-list" style="color:black;"></div>
-        </div>
-        <table>
-            <thead><tr><th style="color:#94a3b8;">Heure</th><th style="color:#94a3b8;">Train</th><th style="color:#94a3b8;">Direction/Provenance</th></tr></thead>
-            <tbody id="board-body"><tr><td colspan="3">Recherchez une gare ci-dessus.</td></tr></tbody>
-        </table>
+    <div class="card">
+        <h3>Horaires en gare (10 prochains max)</h3>
+        <select id="board-st" onchange="loadBoard()"></select>
+        <div id="board-res"></div>
     </div>
 </div>
 
+<div id="pdf-zone" style="display:none; padding:20px; background:white; border:2px solid var(--green);"></div>
+
 <script>
-    const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
+    const supabase = supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
     let stations = [];
+    let user = localStorage.getItem('monrail_user');
+    if(user) document.getElementById('auth-btn').innerText = user;
 
     async function init() {
-        document.getElementById('date-input').valueAsDate = new Date();
-        const { data } = await db.from('stations').select('*');
+        document.getElementById('date').valueAsDate = new Date();
+        const {data} = await supabase.from('stations').select('*');
         stations = data || [];
-        
-        setupAutocomplete('dep-input', 'dep-list');
-        setupAutocomplete('arr-input', 'arr-list');
-        setupAutocomplete('board-input', 'board-list', loadBoard);
+        const opts = '<option value="">Choisir...</option>' + stations.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        document.getElementById('dep').innerHTML = opts;
+        document.getElementById('arr').innerHTML = opts;
+        document.getElementById('board-st').innerHTML = opts;
     }
     init();
 
-    function setupAutocomplete(inputId, listId, callback = null) {
-        const input = document.getElementById(inputId);
-        const list = document.getElementById(listId);
-        input.addEventListener('input', () => {
-            const val = input.value.toLowerCase();
-            list.innerHTML = '';
-            if(!val) return list.style.display = 'none';
-            const matches = stations.filter(s => s.name.toLowerCase().includes(val));
-            list.style.display = matches.length ? 'block' : 'none';
-            matches.forEach(s => {
-                const div = document.createElement('div'); div.innerText = s.name;
-                div.onclick = () => { 
-                    input.value = s.name; input.dataset.id = s.id; list.style.display = 'none'; 
-                    if(callback) callback(s.id);
-                };
-                list.appendChild(div);
-            });
-        });
-        document.addEventListener('click', (e) => { if(e.target !== input) list.style.display = 'none'; });
-    }
-
-    function formatTime(isoStr) { return new Date(isoStr).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
-
     async function searchTrains() {
-        const depId = document.getElementById('dep-input').dataset.id;
-        const arrId = document.getElementById('arr-input').dataset.id;
-        const dateVal = document.getElementById('date-input').value;
+        const dep = document.getElementById('dep').value;
+        const arr = document.getElementById('arr').value;
+        const dStr = document.getElementById('date').value;
+        if(!dep || !arr || !dStr) return;
+        
+        const start = new Date(dStr); start.setHours(0,0,0,0);
+        const end = new Date(dStr); end.setHours(23,59,59,999);
+
+        const {data: lines} = await supabase.from('lines').select('*');
+        const {data: journeys} = await supabase.from('journeys').select('*').gte('departure_date', start.toISOString()).lte('departure_date', end.toISOString());
+
         const res = document.getElementById('results');
-
-        if(!depId || !arrId || !dateVal) return alert("Sélectionnez les gares via les suggestions.");
-        res.innerHTML = '<p>Recherche en cours...</p>';
-
-        const startOfDay = new Date(dateVal); startOfDay.setHours(0,0,0,0);
-        const endOfDay = new Date(dateVal); endOfDay.setHours(23,59,59,999);
-
-        // Recherche des trains ayant ce départ et cette arrivée exacte
-        const { data } = await db.from('journeys').select('*')
-            .eq('departure_station_id', depId).eq('arrival_station_id', arrId)
-            .gte('departure_time', startOfDay.toISOString()).lte('departure_time', endOfDay.toISOString())
-            .order('departure_time');
-
         res.innerHTML = '';
-        if(!data || data.length === 0) return res.innerHTML = '<div class="result-card">Aucun train direct programmé ce jour.</div>';
 
-        data.forEach(j => {
-            const stops = JSON.parse(j.stops || '[]');
-            let stopsHtml = '';
-            stops.forEach(s => {
-                stopsHtml += `<div class="stop"><div class="dot"></div>${formatTime(s.arrival)} / ${formatTime(s.departure)}<br><span style="color:#0f172a;">${s.name}</span></div>`;
-            });
+        journeys.forEach(j => {
+            const line = lines.find(l => l.id === j.line_id);
+            const stops = JSON.parse(line.stops);
+            
+            // Vérifie si la ligne dessert le départ puis l'arrivée
+            const idxDep = stops.findIndex(s => s.id === dep);
+            const idxArr = stops.findIndex(s => s.id === arr);
+            
+            if(idxDep !== -1 && idxArr !== -1 && idxDep < idxArr) {
+                const baseTime = new Date(j.departure_date);
+                const depTime = new Date(baseTime.getTime() + (stops[idxDep].offset * 60000));
+                const arrTime = new Date(baseTime.getTime() + (stops[idxArr].offset * 60000));
+                
+                // Prix dynamique
+                let price = line.base_price;
+                const daysDiff = (baseTime - new Date()) / (1000*3600*24);
+                if(line.price_type === 'dynamic' && daysDiff < line.days_advance) price = line.late_price;
 
-            res.innerHTML += `
-                <div class="result-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <div style="background:#e0f2fe; color:#0284c7; display:inline-block; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:12px; margin-bottom:10px;">${j.train_type} N°${j.train_number}</div>
-                            <div style="font-size:24px; font-weight:900;">${formatTime(j.departure_time)} <span style="font-size:16px; color:#64748b; font-weight:600;">${document.getElementById('dep-input').value}</span></div>
-                            <div style="font-size:24px; font-weight:900;">${formatTime(j.arrival_time)} <span style="font-size:16px; color:#64748b; font-weight:600;">${document.getElementById('arr-input').value}</span></div>
+                // Alertes Motif
+                let alertHtml = '';
+                if(j.status === 'cancelled') alertHtml = `<div class="alert">ANNULÉ : ${j.motif}</div>`;
+                if(j.status === 'delayed') alertHtml = `<div class="alert">RETARD +${j.delay_minutes}m : ${j.motif}</div>`;
+
+                // Circuit Droit
+                let circuit = '';
+                for(let i=idxDep; i<=idxArr; i++) {
+                    let t = new Date(baseTime.getTime() + (stops[i].offset * 60000));
+                    circuit += `<div class="stop"><div class="dot"></div>${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}<br>${stops[i].name}</div>`;
+                }
+
+                res.innerHTML += `
+                    <div class="card" style="${j.status==='cancelled'?'opacity:0.5':''}">
+                        ${alertHtml}
+                        <div style="display:flex; justify-content:space-between;">
+                            <div>
+                                <b>${line.train_type} N°${line.train_number}</b> ${line.is_exceptional ? '(Exceptionnel)' : ''}<br>
+                                <h2>${depTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} ➔ ${arrTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</h2>
+                            </div>
+                            <div style="text-align:right;">
+                                <h2>${price} €</h2>
+                                <button onclick="book('${j.id}', ${price})">Réserver</button>
+                            </div>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:32px; font-weight:900; margin-bottom:15px;">${j.base_price} €</div>
-                            <button style="padding:10px 20px;">Réserver</button>
-                        </div>
+                        <p style="font-size:12px; color:gray;">Billet non remboursable, non échangeable.</p>
+                        <div class="timeline">${circuit}</div>
                     </div>
-                    
-                    <div class="timeline">
-                        <div style="position:absolute; top:27px; left:0; width:100%; height:2px; background:#e2e8f0; z-index:1;"></div>
-                        <div class="stop"><div class="dot" style="border-color:#059669;"></div>DÉPART<br><span style="color:#0f172a;">${document.getElementById('dep-input').value}</span></div>
-                        ${stopsHtml}
-                        <div class="stop"><div class="dot" style="border-color:#e11d48;"></div>ARRIVÉE<br><span style="color:#0f172a;">${document.getElementById('arr-input').value}</span></div>
-                    </div>
-                </div>
-            `;
+                `;
+            }
         });
+        if(res.innerHTML === '') res.innerHTML = '<p>Aucun trajet trouvé.</p>';
     }
 
-    async function loadBoard(stationId) {
-        const tbody = document.getElementById('board-body');
-        tbody.innerHTML = '<tr><td colspan="3">Chargement...</td></tr>';
+    function handleAuth() {
+        const nom = prompt("Créer un compte - Entrez votre nom complet :");
+        if(nom) { localStorage.setItem('monrail_user', nom); user = nom; document.getElementById('auth-btn').innerText = nom; }
+    }
+
+    async function book(jId, price) {
+        if(!user) return alert("Vous devez vous connecter ou créer un compte avant de payer.");
+        if(prompt(`Paiement Fictif de ${price}€ - Entrez votre N° de carte :`)) {
+            await supabase.from('tickets').insert([{passenger_name: user, journey_id: jId, price_paid: price}]);
+            alert("Réservation confirmée !");
+        }
+    }
+
+    async function loadBoard() {
+        const st = document.getElementById('board-st').value;
+        const {data: lines} = await supabase.from('lines').select('*');
+        const {data: journeys} = await supabase.from('journeys').select('*').gte('departure_date', new Date().toISOString());
         
-        const now = new Date();
-        const future = new Date(now.getTime() + (10 * 3600 * 1000)); // +10h max
-
-        // Recherche des trains où la gare est départ ou arrivée
-        const { data } = await db.from('journeys').select('*')
-            .or(`departure_station_id.eq.${stationId},arrival_station_id.eq.${stationId}`)
-            .gte('departure_time', now.toISOString())
-            .lte('departure_time', future.toISOString())
-            .order('departure_time')
-            .limit(10);
-
-        tbody.innerHTML = '';
-        if(!data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="3">Aucun train dans les 10 prochaines heures.</td></tr>';
-
-        data.forEach(j => {
-            const isDep = j.departure_station_id === stationId;
-            const time = isDep ? formatTime(j.departure_time) : formatTime(j.arrival_time);
-            const targetStationId = isDep ? j.arrival_station_id : j.departure_station_id;
-            const targetName = stations.find(s => s.id === targetStationId)?.name || 'Inconnu';
-            const direction = isDep ? `<span style="color:#0ea5e9;">➔ Vers</span> ${targetName}` : `<span style="color:#f59e0b;">⟵ En provenance de</span> ${targetName}`;
-
-            tbody.innerHTML += `
-                <tr>
-                    <td style="font-size:20px; font-weight:bold; color:white;">${time}</td>
-                    <td style="font-weight:bold; color:white;">${j.train_type} N°${j.train_number}</td>
-                    <td style="color:white;">${direction}</td>
-                </tr>
-            `;
+        let html = '';
+        let count = 0;
+        journeys.forEach(j => {
+            const line = lines.find(l => l.id === j.line_id);
+            const stops = JSON.parse(line.stops);
+            const stop = stops.find(s => s.id === st);
+            if(stop && count < 10) {
+                const t = new Date(new Date(j.departure_date).getTime() + (stop.offset * 60000));
+                html += `<div style="padding:10px; border-bottom:1px solid #eee;">${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${line.train_type} N°${line.train_number} - ${j.status==='delayed'?'Retard':(j.status==='cancelled'?'Supprimé':'À l\'heure')}</div>`;
+                count++;
+            }
         });
+        document.getElementById('board-res').innerHTML = html;
+    }
+
+    async function showTickets() {
+        if(!user) return alert("Connectez-vous.");
+        const {data} = await supabase.from('tickets').select('*, journeys(departure_date, lines(train_type, train_number))').eq('passenger_name', user);
+        
+        const zone = document.getElementById('pdf-zone');
+        zone.style.display = 'block';
+        zone.innerHTML = '<h2>Vos Billets MONRail</h2>';
+        data.forEach(t => {
+            zone.innerHTML += `<div style="margin-bottom:20px; border:1px dashed gray; padding:10px;">
+                <b>${t.passenger_name}</b><br>
+                ${t.journeys.lines.train_type} N°${t.journeys.lines.train_number} - Date: ${new Date(t.journeys.departure_date).toLocaleString()}<br>
+                <i>Billet strictement personnel</i>
+            </div>`;
+        });
+        zone.innerHTML += `<button onclick="html2pdf(document.getElementById('pdf-zone'))">Télécharger PDF</button> <button onclick="document.getElementById('pdf-zone').style.display='none'">Fermer</button>`;
     }
 </script>
 </body>
