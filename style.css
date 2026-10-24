@@ -1,15 +1,14 @@
-/* Import d'une police moderne similaire à celle des grands sites */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
     --primary-red: #D32F2F;
     --primary-green: #2E7D32;
     --dark-green: #1b491e;
-    --bg-light: #f2f4f7;
+    --bg-light: #f4f5f9;
     --text-dark: #212529;
     --text-muted: #6c757d;
     --white: #FFFFFF;
-    --border-color: #e9ecef;
+    --border-color: #e2e5ec;
 }
 
 body {
@@ -20,7 +19,13 @@ body {
     padding: 0;
 }
 
-/* NAVIGATION (Inspirée de l'image 1) */
+/* RESET BOUTONS GLOBAUX */
+button {
+    font-family: 'Inter', sans-serif;
+    outline: none;
+}
+
+/* NAVIGATION */
 header {
     background-color: var(--white);
     padding: 0 40px;
@@ -28,7 +33,6 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -40,28 +44,28 @@ header {
     color: var(--primary-red);
     text-decoration: none;
     letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-.logo span {
-    color: var(--primary-green);
-}
+.logo span { color: var(--primary-green); }
 
 .nav-links {
     display: flex;
-    gap: 30px;
+    gap: 32px;
 }
 .nav-links a {
     text-decoration: none;
     color: var(--text-dark);
     font-weight: 600;
     font-size: 15px;
-    cursor: pointer;
 }
 .nav-links a:hover { color: var(--primary-green); }
 
 .nav-actions {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
 }
 .nav-actions a {
     text-decoration: none;
@@ -80,121 +84,141 @@ header {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 8px 12px;
 }
 .btn-login:hover { color: var(--primary-red); }
 
-/* CONTENEUR PRINCIPAL */
+/* CONTENEUR ET TITRE */
 .container {
     max-width: 1000px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 60px 20px;
 }
 
 .hero-title {
     text-align: center;
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 30px;
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 40px;
     color: var(--text-dark);
+    letter-spacing: -0.5px;
 }
 
-/* BLOC DE RECHERCHE (Inspiré de l'image 1) */
+/* MOTEUR DE RECHERCHE (Style Pilule SNCF Connect) */
+.search-widget-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
 .search-widget {
     background: var(--white);
-    border-radius: 16px;
-    padding: 10px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    margin-bottom: 40px;
+    border-radius: 50px;
+    padding: 8px 8px 8px 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
     display: flex;
     align-items: center;
-    gap: 2px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 850px;
 }
 
 .search-input-group {
     position: relative;
     flex: 1;
+    display: flex;
+    align-items: center;
 }
 
 .search-input-group input {
     width: 100%;
-    padding: 20px;
+    padding: 15px 10px;
     border: none;
     background: transparent;
     font-size: 16px;
     font-weight: 500;
     outline: none;
-    box-sizing: border-box;
+    color: var(--text-dark);
 }
+.search-input-group input::placeholder { color: var(--text-muted); }
 
 .search-input-group:not(:last-child)::after {
     content: '';
     position: absolute;
-    right: 0;
-    top: 20%;
-    height: 60%;
+    right: 15px;
+    height: 24px;
     width: 1px;
     background-color: var(--border-color);
 }
 
 .btn-search {
-    background-color: var(--primary-green);
-    color: var(--white);
-    border: none;
-    padding: 18px 30px;
-    border-radius: 12px;
+    background-color: var(--white);
+    color: var(--primary-green);
+    border: 1px solid var(--primary-green);
+    padding: 14px 28px;
+    border-radius: 40px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s;
     margin-left: 10px;
 }
-.btn-search:hover { background-color: var(--dark-green); }
+.btn-search:hover { background-color: var(--primary-green); color: var(--white); }
 
 .autocomplete-list {
     position: absolute;
-    top: 100%;
+    top: 50px;
     left: 0;
-    right: 0;
+    width: 250px;
     background: var(--white);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    max-height: 200px;
+    border-radius: 12px;
+    max-height: 250px;
     overflow-y: auto;
     z-index: 1000;
-    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
-    margin-top: 5px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
 .autocomplete-list div {
-    padding: 15px 20px;
+    padding: 12px 20px;
     cursor: pointer;
     font-weight: 500;
+    font-size: 15px;
 }
-.autocomplete-list div:hover { background-color: var(--bg-light); }
+.autocomplete-list div:hover { background-color: var(--bg-light); color: var(--primary-green); }
 
-/* RESULTATS (Inspirés de l'image 2) */
-.results-header {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 20px;
+/* BANNIERE PROMO */
+.promo-banner {
+    background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+    border-radius: 20px;
+    padding: 40px 50px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
+.promo-content h3 { font-size: 28px; margin: 0 0 10px 0; font-weight: 800; color: #1a365d; }
+.promo-content p { margin: 0; font-size: 16px; color: #2a4365; }
+
+/* RESULTATS */
+.results-header { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
 
 .result-card {
     background: var(--white);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 20px 24px;
     display: flex;
     align-items: center;
     margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border: 1px solid transparent;
-    transition: 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    border: 1px solid var(--border-color);
 }
-.result-card:hover { border-color: var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.result-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
 .train-badge {
-    width: 120px;
-    padding: 8px 12px;
+    width: 130px;
+    padding: 10px 12px;
     border-radius: 8px;
     font-weight: 800;
     font-size: 14px;
@@ -203,120 +227,57 @@ header {
 }
 .badge-tgv { background: #ffebee; color: var(--primary-red); }
 .badge-ter { background: #e8f5e9; color: var(--primary-green); }
-.badge-cite { background: #e3f2fd; color: #1976d2; }
+.badge-cite { background: #f8f9fa; color: var(--text-dark); border: 1px solid var(--border-color); }
 
-.journey-times {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex: 1;
-    margin-left: 30px;
-}
+.journey-times { display: flex; flex-direction: column; gap: 8px; flex: 1; margin-left: 30px; }
 .time-row { display: flex; align-items: center; gap: 12px; }
-.time-val { font-size: 18px; font-weight: 700; width: 55px; }
+.time-val { font-size: 20px; font-weight: 800; width: 65px; }
 .station-val { font-size: 16px; font-weight: 500; color: var(--text-dark); }
 
 .journey-info {
-    flex: 1;
-    text-align: center;
-    font-size: 14px;
-    color: var(--text-muted);
+    flex: 1; text-align: center; font-size: 14px; color: var(--text-muted);
 }
 .journey-info a {
-    color: var(--primary-green);
-    text-decoration: none;
-    font-weight: 600;
-    margin-top: 5px;
-    display: inline-block;
-    cursor: pointer;
+    color: var(--text-dark); text-decoration: underline; font-weight: 500; margin-top: 5px; display: inline-block; cursor: pointer;
 }
 
 .price-block {
-    text-align: right;
-    width: 150px;
-    border-left: 1px solid var(--border-color);
-    padding-left: 20px;
+    text-align: right; width: 160px; border-left: 1px solid var(--border-color); padding-left: 20px;
 }
-.price-label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px; }
-.price-val { font-size: 24px; font-weight: 800; color: var(--text-dark); }
+.price-label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+.price-val { font-size: 26px; font-weight: 800; color: var(--text-dark); }
 
-/* BOUTON RESERVER (Dans les résultats) */
 .btn-book {
-    background-color: var(--white);
-    color: var(--primary-red);
-    border: 2px solid var(--primary-red);
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 10px;
-    width: 100%;
-    transition: 0.2s;
+    background-color: var(--white); color: var(--text-dark); border: 1px solid var(--border-color);
+    padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; width: 100%; transition: 0.2s;
 }
-.btn-book:hover { background-color: var(--primary-red); color: var(--white); }
+.btn-book:hover { background-color: var(--bg-light); border-color: var(--text-dark); }
 
 /* TIMELINE (Détail trajet) */
 .timeline-details {
-    display: none;
-    width: 100%;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border-color);
+    display: none; width: 100%; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);
 }
-.timeline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: relative;
-}
+.timeline { display: flex; align-items: center; justify-content: space-between; position: relative; }
 .timeline::before {
-    content: ''; position: absolute; top: 11px; left: 0; width: 100%; height: 2px;
-    background: var(--border-color); z-index: 1;
+    content: ''; position: absolute; top: 9px; left: 0; width: 100%; height: 2px; background: var(--text-muted); z-index: 1;
 }
-.timeline-stop { text-align: center; position: relative; z-index: 2; width: 33%; font-size: 13px;}
+.timeline-stop { text-align: center; position: relative; z-index: 2; width: 33%; font-size: 14px; font-weight: 500; }
 .timeline-dot {
-    width: 16px; height: 16px; background: var(--white); border: 4px solid var(--primary-green);
-    border-radius: 50%; margin: 0 auto 8px auto;
+    width: 14px; height: 14px; background: var(--white); border: 4px solid var(--text-dark);
+    border-radius: 50%; margin: 0 auto 10px auto;
 }
 
-/* BANNIERE PROMO (Inspirée image 1) */
-.promo-banner {
-    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
-    border-radius: 16px;
-    padding: 40px;
-    margin-bottom: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: #333;
-}
-.promo-content h3 { font-size: 28px; margin: 0 0 10px 0; font-weight: 800; }
-.promo-content p { margin: 0; font-size: 16px; }
-
-/* BILLETS */
-.ticket-wrapper {
-    background: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 30px;
-    text-align: center;
-    margin-top: 20px;
-}
-.ticket-wrapper h2 { color: var(--primary-green); margin-top: 0; }
-
-/* FORMULAIRES ADMIN */
+/* ADMIN CARDS */
 .admin-card {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 30px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    background: var(--white); border-radius: 16px; padding: 30px; margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border-color);
 }
 .admin-card input, .admin-card select {
-    width: 100%; padding: 12px; border: 1px solid var(--border-color);
-    border-radius: 8px; margin-bottom: 15px; font-size: 15px; box-sizing: border-box;
+    width: 100%; padding: 14px; border: 1px solid var(--border-color);
+    border-radius: 8px; margin-bottom: 15px; font-size: 15px; box-sizing: border-box; outline:none;
 }
 .btn-admin {
     background: var(--primary-green); color: white; border: none;
-    padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;
+    padding: 14px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size:15px;
 }
+.btn-admin:hover { opacity: 0.9; }
