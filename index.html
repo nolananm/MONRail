@@ -39,14 +39,14 @@
 </div>
 
 <script>
-    const supabase = supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
+    const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
 
     let stations = [], fakeUser = localStorage.getItem('monrail_user');
     if(fakeUser) document.getElementById('auth-btn').innerText = fakeUser.split('@')[0];
 
     async function init() {
         try {
-            const { data, error } = await supabase.from('stations').select('*');
+            const { data, error } = await db.from('stations').select('*');
             if(error) throw error;
             stations = data || [];
             document.getElementById('date-input').valueAsDate = new Date();
@@ -84,7 +84,7 @@
             const resContainer = document.getElementById('results-container');
             resContainer.innerHTML = '<p>Recherche...</p>';
 
-            const { data, error } = await supabase.from('journeys')
+            const { data, error } = await db.from('journeys')
                 .select('*, lines(*)')
                 .eq('departure_station_id', depId).eq('arrival_station_id', arrId)
                 .gte('departure_date', startOfDay.toISOString())
@@ -97,14 +97,12 @@
             if(!data || data.length === 0) return resContainer.innerHTML = '<p>Aucun train trouvé.</p>';
 
             data.forEach(j => {
-                // Calcul Prix Dynamique
                 let finalPrice = j.lines.base_price;
                 if(j.lines.price_type === 'dynamic') {
                     const daysDiff = (new Date(j.departure_date) - new Date()) / (1000 * 3600 * 24);
                     if(daysDiff < j.lines.days_before_change) finalPrice = j.lines.late_price;
                 }
 
-                // Statut & Motifs
                 const depDate = new Date(j.departure_date);
                 const arrDate = new Date(depDate.getTime() + (90 * 60000) + (j.delay_minutes * 60000));
                 
@@ -113,7 +111,6 @@
                 if(isCancelled) statusHtml = `<div style="color:var(--primary-red); font-weight:bold; margin-bottom:10px;">SUPPRIMÉ - Motif: ${j.motif || 'Non précisé'}</div>`;
                 else if(j.status === 'delayed') statusHtml = `<div style="color:#f59e0b; font-weight:bold; margin-bottom:10px;">RETARD +${j.delay_minutes}min - Motif: ${j.motif || 'Incident'}</div>`;
 
-                // Gestion visuelle des arrêts
                 let addedStopsHtml = '';
                 let addedIds = JSON.parse(j.added_stations || '[]');
                 addedIds.forEach(id => addedStopsHtml += `<div class="track-stop" style="color:var(--primary-green);"><div class="track-dot" style="border-color:var(--primary-green);"></div>Arrêt Exceptionnel<br>${getStationName(id)}</div>`);
@@ -160,8 +157,7 @@
             const now = new Date();
             const in10Hours = new Date(now.getTime() + (10 * 3600 * 1000));
 
-            // Cherche les trains où la gare est départ OU arrivée
-            const { data, error } = await supabase.from('journeys')
+            const { data, error } = await db.from('journeys')
                 .select('*, lines(*)')
                 .or(`departure_station_id.eq.${stationId},arrival_station_id.eq.${stationId}`)
                 .gte('departure_date', now.toISOString())
