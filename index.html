@@ -2,121 +2,150 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>MONRail - Client</title>
-    <link rel="stylesheet" href="style.css?v=5">
+    <title>MONRail - Réservation</title>
+    <link rel="stylesheet" href="style.css?v=6">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .autocomplete-list { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; }
-        .autocomplete-list div { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .autocomplete-list div:hover { background: #f0fdf4; color: #059669; }
-    </style>
 </head>
 <body>
 <header>
     <a href="#" class="logo">MON<span>Rail</span></a>
-    <button class="btn-login" id="auth-btn" onclick="handleAuth()">Connexion</button>
 </header>
 <div class="container">
-    <div class="search-widget">
-        <div class="search-input-group" style="position:relative;">
-            <input type="text" id="dep-input" placeholder="Départ" autocomplete="off">
-            <div id="dep-list" class="autocomplete-list"></div>
-        </div>
-        <div class="search-input-group" style="position:relative;">
-            <input type="text" id="arr-input" placeholder="Arrivée" autocomplete="off">
-            <div id="arr-list" class="autocomplete-list"></div>
-        </div>
-        <div class="search-input-group" style="flex:0.5;"><input type="date" id="date-input"></div>
-        <button class="btn-search" onclick="searchTrains()">Chercher</button>
+    
+    <div class="search-widget" style="display:flex; gap:10px; align-items:center; background:white; padding:15px; border-radius:99px; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
+        <select id="search-dep" style="flex:1; border:none; outline:none; font-size:16px; font-weight:bold; background:transparent; padding:10px;"><option value="">Gare de départ...</option></select>
+        <select id="search-arr" style="flex:1; border:none; outline:none; font-size:16px; font-weight:bold; background:transparent; padding:10px;"><option value="">Gare d'arrivée...</option></select>
+        <input type="date" id="search-date" style="flex:0.5; border:none; outline:none; font-size:16px; font-weight:bold; background:transparent; padding:10px;">
+        <button style="background:#059669; color:white; border:none; padding:15px 30px; border-radius:99px; font-weight:bold; cursor:pointer;" onclick="searchTrains()">Rechercher</button>
     </div>
 
-    <div id="results-container"></div>
+    <div id="results-container" style="margin-top:40px;"></div>
+
+    <div style="background:#0f172a; padding:30px; border-radius:20px; margin-top:60px; color:white;">
+        <h2>Horaires en direct</h2>
+        <select id="board-station" onchange="loadBoard()" style="width:100%; max-width:400px; padding:12px; border-radius:8px; margin-bottom:20px;"><option value="">Sélectionnez une gare...</option></select>
+        
+        <table style="width:100%; text-align:left; border-collapse:collapse;">
+            <thead><tr style="border-bottom:1px solid #334155;">
+                <th style="padding:15px 10px; color:#94a3b8;">Heure</th>
+                <th style="padding:15px 10px; color:#94a3b8;">Train</th>
+                <th style="padding:15px 10px; color:#94a3b8;">Statut</th>
+            </tr></thead>
+            <tbody id="board-body"><tr><td colspan="3" style="padding:15px 10px;">Sélectionnez une gare ci-dessus.</td></tr></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
     const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
     let stations = [];
 
-    async function init() {
-        const { data } = await db.from('stations').select('*');
+    async function initClient() {
+        document.getElementById('search-date').valueAsDate = new Date();
+        const { data } = await db.from('stations').select('*').order('name');
         stations = data || [];
-        document.getElementById('date-input').valueAsDate = new Date();
         
-        setupAutocomplete(document.getElementById('dep-input'), document.getElementById('dep-list'));
-        setupAutocomplete(document.getElementById('arr-input'), document.getElementById('arr-list'));
+        let options = '<option value="">Sélectionner...</option>';
+        stations.forEach(s => options += `<option value="${s.id}">${s.name}</option>`);
+        
+        document.getElementById('search-dep').innerHTML = '<option value="">Gare de départ...</option>' + options;
+        document.getElementById('search-arr').innerHTML = '<option value="">Gare d\'arrivée...</option>' + options;
+        document.getElementById('board-station').innerHTML = '<option value="">Sélectionnez une gare...</option>' + options;
     }
-    init();
+    initClient();
 
-    function setupAutocomplete(input, list) {
-        input.addEventListener('input', () => {
-            const val = input.value.toLowerCase();
-            list.innerHTML = '';
-            if(!val) return list.style.display = 'none';
-            const matches = stations.filter(s => s.name.toLowerCase().includes(val));
-            list.style.display = matches.length ? 'block' : 'none';
-            matches.forEach(s => {
-                const div = document.createElement('div'); div.innerText = s.name;
-                div.onclick = () => { input.value = s.name; input.dataset.id = s.id; list.style.display = 'none'; };
-                list.appendChild(div);
-            });
-        });
-    }
+    function getStationName(id) { const s = stations.find(x => x.id === id); return s ? s.name : 'Inconnu'; }
 
     async function searchTrains() {
-        const depId = document.getElementById('dep-input').dataset.id;
-        const arrId = document.getElementById('arr-input').dataset.id;
-        const dateVal = document.getElementById('date-input').value;
-        if(!depId || !arrId || !dateVal) return alert('Sélectionnez les gares dans les suggestions.');
+        const depId = document.getElementById('search-dep').value;
+        const arrId = document.getElementById('search-arr').value;
+        const dateVal = document.getElementById('search-date').value;
+        const res = document.getElementById('results-container');
         
+        if(!depId || !arrId || !dateVal) return alert("Sélectionnez vos critères de recherche.");
+        res.innerHTML = '<p style="text-align:center; font-weight:bold;">Recherche en cours...</p>';
+
         const startOfDay = new Date(dateVal); startOfDay.setHours(0,0,0,0);
         const endOfDay = new Date(dateVal); endOfDay.setHours(23,59,59,999);
-        const resContainer = document.getElementById('results-container');
-        resContainer.innerHTML = '<p>Recherche...</p>';
 
-        // Recherche les lignes qui correspondent au départ/arrivée
-        const { data: matchingLines } = await db.from('lines').select('id').eq('departure_station_id', depId).eq('arrival_station_id', arrId);
-        if(!matchingLines || matchingLines.length === 0) return resContainer.innerHTML = '<p>Aucune ligne directe trouvée.</p>';
+        // Trouve les lignes directes correspondantes
+        const { data: lines } = await db.from('lines').select('id, base_price, train_type, train_number').eq('departure_station_id', depId).eq('arrival_station_id', arrId);
+        if(!lines || lines.length === 0) return res.innerHTML = '<div style="background:white; padding:30px; border-radius:12px; text-align:center;">Aucun train direct ne relie ces gares.</div>';
         
-        const lineIds = matchingLines.map(l => l.id);
-        const { data } = await db.from('journeys').select('*, lines(*)').in('line_id', lineIds)
-            .gte('departure_date', startOfDay.toISOString()).lte('departure_date', endOfDay.toISOString()).order('departure_date');
+        const lineIds = lines.map(l => l.id);
+        const { data: journeys } = await db.from('journeys').select('*').in('line_id', lineIds).gte('departure_date', startOfDay.toISOString()).lte('departure_date', endOfDay.toISOString()).order('departure_date');
 
-        resContainer.innerHTML = '';
-        if(!data || data.length === 0) return resContainer.innerHTML = '<p>Aucun train prévu à cette date.</p>';
+        if(!journeys || journeys.length === 0) return res.innerHTML = '<div style="background:white; padding:30px; border-radius:12px; text-align:center;">Aucun départ programmé à cette date.</div>';
 
-        data.forEach(j => {
-            const depDate = new Date(j.departure_date);
-            const arrDate = new Date(depDate.getTime() + (120 * 60000) + (j.delay_minutes * 60000));
+        res.innerHTML = '';
+        journeys.forEach(j => {
+            const line = lines.find(l => l.id === j.line_id);
+            const d = new Date(j.departure_date);
+            const a = new Date(d.getTime() + (90 * 60000) + (j.delay_minutes * 60000));
             
-            let statusHtml = j.status === 'cancelled' ? `<div style="color:red; font-weight:bold;">SUPPRIMÉ: ${j.motif}</div>` : (j.status === 'delayed' ? `<div style="color:orange; font-weight:bold;">RETARD +${j.delay_minutes}m: ${j.motif}</div>` : '');
-            
-            let stopsHtml = '';
-            const stops = JSON.parse(j.lines.stops || '[]');
-            stops.forEach(st => {
-                let stopTime = new Date(depDate.getTime() + (st.offset * 60000));
-                stopsHtml += `<div class="track-stop"><div class="track-dot" style="border-color:#ccc;"></div>${stopTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}<br>${st.name}</div>`;
-            });
+            let statusBadge = '';
+            let opacity = '1';
+            if(j.status === 'cancelled') { opacity = '0.5'; statusBadge = `<span style="background:red; color:white; padding:5px 10px; border-radius:5px; font-size:12px; font-weight:bold;">SUPPRIMÉ (${j.motif})</span>`; }
+            else if(j.status === 'delayed') { statusBadge = `<span style="background:orange; color:white; padding:5px 10px; border-radius:5px; font-size:12px; font-weight:bold;">RETARD +${j.delay_minutes}M (${j.motif})</span>`; }
 
-            resContainer.innerHTML += `
-                <div class="result-card" style="${j.status === 'cancelled' ? 'opacity:0.6;' : ''}">
-                    ${statusHtml}
-                    <div class="result-card-header" style="display:flex; width:100%; align-items:center;">
-                        <div class="train-badge badge-tgv">${j.lines.train_type} <br><small>N°${j.lines.train_number}</small></div>
-                        <div class="journey-times">
-                            <div class="time-row"><span class="time-val">${depDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span><span class="station-val">${document.getElementById('dep-input').value}</span></div>
-                            <div class="time-row"><span class="time-val">${arrDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span><span class="station-val">${document.getElementById('arr-input').value}</span></div>
+            res.innerHTML += `
+                <div style="background:white; border-radius:16px; padding:25px; margin-bottom:20px; border:1px solid #e2e8f0; opacity:${opacity};">
+                    <div style="margin-bottom:15px;">${statusBadge}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="background:#e0f2fe; color:#0284c7; display:inline-block; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:12px; margin-bottom:10px;">${line.train_type} N°${line.train_number}</div>
+                            <div style="display:flex; align-items:center; gap:15px; margin-bottom:10px;">
+                                <span style="font-size:24px; font-weight:900;">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span> <span style="color:#64748b; font-weight:600;">${getStationName(depId)}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:15px;">
+                                <span style="font-size:24px; font-weight:900;">${a.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span> <span style="color:#64748b; font-weight:600;">${getStationName(arrId)}</span>
+                            </div>
                         </div>
-                        <div class="price-block"><span class="price-val">${j.lines.base_price} €</span><button class="btn-book">Réserver</button></div>
+                        <div style="text-align:right; border-left:1px dashed #cbd5e1; padding-left:30px;">
+                            <span style="font-size:32px; font-weight:900; display:block; margin-bottom:15px;">${line.base_price} €</span>
+                            <button style="background:transparent; border:2px solid #0f172a; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="alert('Réservation simulée.')">Réserver</button>
+                        </div>
                     </div>
-                    <div class="timeline-track" style="width:100%; margin-top:20px; padding-top:20px; border-top:1px solid #eee; display:flex; justify-content:space-between;">
-                        <div class="track-stop"><div class="track-dot"></div>DÉPART<br>${document.getElementById('dep-input').value}</div>
-                        ${stopsHtml}
-                        <div class="track-stop"><div class="track-dot end"></div>ARRIVÉE<br>${document.getElementById('arr-input').value}</div>
-                    </div>
-                </div>`;
+                </div>
+            `;
         });
     }
-    function handleAuth() { alert("Connecté."); }
+
+    async function loadBoard() {
+        const stId = document.getElementById('board-station').value;
+        const tbody = document.getElementById('board-body');
+        if(!stId) return tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Sélectionnez une gare.</td></tr>';
+        
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Chargement...</td></tr>';
+        const now = new Date();
+        const future = new Date(now.getTime() + (10 * 3600 * 1000));
+
+        // Trouve les départs ou arrivées à cette gare
+        const { data: lines } = await db.from('lines').select('id, train_type, train_number').or(`departure_station_id.eq.${stId},arrival_station_id.eq.${stId}`);
+        if(!lines || lines.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Aucun train ne dessert cette gare.</td></tr>';
+        
+        const lineIds = lines.map(l => l.id);
+        const { data: journeys } = await db.from('journeys').select('*').in('line_id', lineIds).gte('departure_date', now.toISOString()).lte('departure_date', future.toISOString()).order('departure_date').limit(10);
+
+        tbody.innerHTML = '';
+        if(!journeys || journeys.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Aucun train prévu dans les 10 prochaines heures.</td></tr>';
+
+        journeys.forEach(j => {
+            const line = lines.find(l => l.id === j.line_id);
+            const d = new Date(j.departure_date);
+            let status = '<span style="color:#22c55e; font-weight:bold;">À l\'heure</span>';
+            if(j.status === 'delayed') status = `<span style="color:#f59e0b; font-weight:bold;">Retard (${j.motif})</span>`;
+            if(j.status === 'cancelled') status = `<span style="color:#ef4444; font-weight:bold;">Supprimé</span>`;
+
+            tbody.innerHTML += `
+                <tr style="border-bottom:1px solid #334155;">
+                    <td style="padding:15px 10px; font-weight:bold; font-size:18px;">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+                    <td style="padding:15px 10px; font-weight:bold;">${line.train_type} N°${line.train_number}</td>
+                    <td style="padding:15px 10px;">${status}</td>
+                </tr>
+            `;
+        });
+    }
 </script>
 </body>
-</html>`
+</html>
