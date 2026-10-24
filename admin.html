@@ -40,7 +40,7 @@
         <div class="col admin-card">
             <h2>1. Gares & Itinéraires</h2>
             <div style="display:flex; gap:10px; margin-bottom:30px;">
-                <input type="text" id="new-station" class="admin-input" style="margin:0;" placeholder="Nouvelle gare...">
+                <input type="text" id="new-station" class="admin-input" style="margin:0;" placeholder="Nouvelle gare (Touche Entrée pour valider)..." onkeydown="if(event.key === 'Enter') addStation()">
                 <button class="btn-admin" onclick="addStation()">Ajouter</button>
             </div>
 
@@ -153,7 +153,7 @@
         document.getElementById('p-line').innerHTML = (ln||[]).map(l => `<option value="${l.id}">${l.train_type} N°${l.train_number}</option>`).join('');
 
         const { data: jn } = await db.from('journeys').select('*, lines(*)').gte('departure_date', new Date().toISOString()).order('departure_date');
-        document.getElementById('m-journey').innerHTML = (jn||[]).map(j => `<option value="${j.id}">${new Date(j.departure_date).toLocaleString([],{hour:'2-digit',minute:'2-digit'})} - ${j.lines.train_type} N°${j.lines.train_number}</option>`).join('');
+        document.getElementById('m-journey').innerHTML = (jn||[]).map(j => `<option value="${j.id}">${new Date(j.departure_date).toLocaleString([],{hour:'2-digit',minute:'2-digit'})} - N°${j.lines.train_number}</option>`).join('');
     }
     loadData();
 
@@ -176,10 +176,21 @@
     }
 
     async function addStation() {
-        const name = document.getElementById('new-station').value;
+        const inputElement = document.getElementById('new-station');
+        const name = inputElement.value.trim();
         if(!name) return;
-        await db.from('stations').insert([{ name }]);
-        document.getElementById('new-station').value = ''; loadData(); alert("Gare ajoutée.");
+        
+        inputElement.disabled = true;
+        const { error } = await db.from('stations').insert([{ name }]);
+        inputElement.disabled = false;
+        
+        if(!error) {
+            inputElement.value = '';
+            loadData();
+            inputElement.focus();
+        } else {
+            console.error(error);
+        }
     }
 
     function addRouteStop() {
@@ -192,7 +203,7 @@
     }
 
     async function createLine() {
-        if(routeDraft.length < 2) return alert("Construisez un trajet complet avec départ et arrivée.");
+        if(routeDraft.length < 2) return alert("Il faut au moins un départ et une arrivée.");
         const num = Math.floor(100000 + Math.random() * 900000).toString();
         await db.from('lines').insert([{
             train_number: num, train_type: document.getElementById('l-type').value,
@@ -227,7 +238,7 @@
         const delay = document.getElementById('m-delay').value || 0;
         const motif = document.getElementById('m-motif').value;
         await db.from('journeys').update({ status, delay_minutes: delay, motif }).eq('id', id);
-        alert("Action appliquée. Synchronisation client ok.");
+        alert("Modification appliquée. Les clients sont alertés.");
     }
 
     async function modifyStop(action) {
