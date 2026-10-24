@@ -3,40 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONRail - L'excellence à grande vitesse</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <title>MONRail - Réservation</title>
+    <link rel="stylesheet" href="style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
 <header>
-    <a href="#" class="logo">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="4" y="9" width="16" height="6"></rect><line x1="10" y1="4" x2="10" y2="20"></line></svg>
-        MON<span>Rail</span>
-    </a>
+    <a href="#" class="logo">MON<span>Rail</span><span class="dot">.</span></a>
     <div class="nav-links">
         <a href="#horaires-gare">Horaires en gare</a>
-        <a href="#">Aide & Contact</a>
+        <a onclick="openTicketsModal()">Vos billets</a>
     </div>
     <div class="nav-actions">
-        <button class="btn-login" onclick="login()">Se connecter</button>
+        <button class="btn-login" id="auth-btn" onclick="handleAuth()">Se connecter</button>
     </div>
 </header>
 
 <div class="container">
-    <h1 class="hero-title">Où vous emmène<br>votre prochaine histoire ?</h1>
+    <h1 class="hero-title">Trouvez votre prochain trajet.</h1>
 
     <div class="search-widget">
         <div class="search-input-group">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-            <input type="text" id="dep-input" placeholder="Départ" onkeyup="searchStation(this, 'dep-list')">
-            <div id="dep-list" class="autocomplete-list" style="display:none;"></div>
+            <input type="text" id="dep-input" placeholder="Gare de départ" onkeyup="searchStation(this, 'dep-list')">
+            <div id="dep-list" class="autocomplete-list"></div>
         </div>
         <div class="search-input-group">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-green)" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-            <input type="text" id="arr-input" placeholder="Arrivée" onkeyup="searchStation(this, 'arr-list')">
-            <div id="arr-list" class="autocomplete-list" style="display:none;"></div>
+            <input type="text" id="arr-input" placeholder="Gare d'arrivée" onkeyup="searchStation(this, 'arr-list')">
+            <div id="arr-list" class="autocomplete-list"></div>
         </div>
         <div class="search-input-group" style="flex: 0.5;">
             <input type="date" id="date-input">
@@ -47,32 +42,33 @@
     <div id="results-header" class="section-title"></div>
     <div id="results-container"></div>
 
-    <!-- NOUVELLE FONCTION : Horaires en Gare -->
+    <!-- Tableau Horaires en Gare -->
     <div class="board-container" id="horaires-gare">
         <div class="board-header">
-            <h2>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                Tableau des Départs & Arrivées
-            </h2>
+            <h2>Tableau d'affichage des gares</h2>
             <div style="position:relative;">
                 <input type="text" id="board-input" placeholder="Rechercher une gare..." onkeyup="searchBoardStation()">
-                <div id="board-list" class="autocomplete-list" style="display:none; color:black;"></div>
+                <div id="board-list" class="autocomplete-list" style="color:black;"></div>
             </div>
         </div>
         <table class="board-table">
             <thead>
-                <tr>
-                    <th>Heure</th>
-                    <th>Train</th>
-                    <th>Direction / Provenance</th>
-                    <th>Voie (Fictif)</th>
-                    <th>Statut</th>
-                </tr>
+                <tr><th>Heure</th><th>Train</th><th>Statut</th></tr>
             </thead>
             <tbody id="board-body">
-                <tr><td colspan="5" style="text-align:center; color:#64748B;">Sélectionnez une gare pour voir les prochains trains (10h max).</td></tr>
+                <tr><td colspan="3" style="text-align:center; color:#64748B;">Sélectionnez une gare ci-dessus.</td></tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- MODALE VOS BILLETS -->
+<div class="modal-overlay" id="tickets-modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="document.getElementById('tickets-modal').style.display='none'">&times;</span>
+        <h2 style="margin-top:0; color:var(--primary-red);">Vos Billets MONRail</h2>
+        <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Retrouvez ici l'historique de vos réservations. Les billets sont nominatifs et non remboursables.</p>
+        <div id="tickets-list-container"></div>
     </div>
 </div>
 
@@ -82,7 +78,16 @@
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let stations = [];
-    
+    let currentUser = null;
+
+    // Check Auth Status on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if(session) {
+            currentUser = session.user;
+            document.getElementById('auth-btn').innerText = "Mon Compte";
+        }
+    });
+
     async function loadStations() {
         let { data } = await supabase.from('stations').select('*');
         stations = data || [];
@@ -90,7 +95,11 @@
     }
     loadStations();
 
-    // Autocomplétion générique
+    function getStationName(id) {
+        const s = stations.find(st => st.id === id);
+        return s ? s.name : 'Inconnu';
+    }
+
     function searchStation(inputEle, listId) {
         const val = inputEle.value.toLowerCase();
         const list = document.getElementById(listId);
@@ -98,8 +107,7 @@
         if (!val) { list.style.display = 'none'; return; }
         
         const matches = stations.filter(s => s.name.toLowerCase().includes(val));
-        if(matches.length > 0) list.style.display = 'block';
-        else list.style.display = 'none';
+        if(matches.length > 0) list.style.display = 'block'; else list.style.display = 'none';
 
         matches.forEach(s => {
             const div = document.createElement('div');
@@ -113,17 +121,19 @@
         });
     }
 
-    // Recherche Principale
     async function searchTrains() {
         const depInput = document.getElementById('dep-input');
         const arrInput = document.getElementById('arr-input');
-        if (!depInput.dataset.id || !arrInput.dataset.id) return alert('Sélectionnez les gares dans la liste.');
+        const depId = depInput.dataset.id;
+        const arrId = arrInput.dataset.id;
+        if (!depId || !arrId) return alert('Sélectionnez les gares dans la liste.');
 
-        document.getElementById('results-header').innerHTML = `Trajets : ${depInput.value} ➔ ${arrInput.value}`;
+        document.getElementById('results-header').innerHTML = `Résultats : ${depInput.value} ➔ ${arrInput.value}`;
         const resContainer = document.getElementById('results-container');
-        resContainer.innerHTML = '<p style="text-align:center; font-weight:600; color:var(--text-muted);">Recherche sécurisée en cours...</p>';
+        resContainer.innerHTML = '<p>Recherche sécurisée...</p>';
         
-        let { data, error } = await supabase.from('journeys').select('*, lines(*)');
+        // Fetch all non-cancelled journeys
+        let { data } = await supabase.from('journeys').select('*, lines(*)').neq('status', 'cancelled');
 
         resContainer.innerHTML = '';
         if(data && data.length > 0) {
@@ -134,100 +144,142 @@
 
                 const depDate = new Date(journey.departure_date);
                 const arrDate = new Date(depDate.getTime() + (90 * 60000));
-                
-                let delayInfo = journey.status === 'delayed' ? `<span style="color:#F59E0B; font-size:14px; font-weight:bold;">+${journey.delay_minutes} min</span>` : '';
-                let isCancelled = journey.status === 'cancelled';
+                let delayInfo = journey.status === 'delayed' ? `<span style="color:#F59E0B; font-weight:bold;">(+${journey.delay_minutes} min)</span>` : '';
 
                 resContainer.innerHTML += `
-                    <div class="result-card" style="${isCancelled ? 'opacity:0.5; pointer-events:none;' : ''}">
-                        <div class="train-badge ${badgeClass}">${journey.lines.train_type}<br><small>N°${journey.lines.train_number}</small></div>
-                        <div class="journey-times">
-                            <div class="time-row">
-                                <span class="time-val" style="${isCancelled ? 'text-decoration:line-through;' : ''}">${depDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                <span class="station-val">${depInput.value} ${delayInfo}</span>
+                    <div class="result-card">
+                        <div class="result-card-header">
+                            <div class="train-badge ${badgeClass}">${journey.lines.train_type} <br><small>N°${journey.lines.train_number}</small></div>
+                            <div class="journey-times">
+                                <div class="time-row"><span class="time-val">${depDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${depInput.value} ${delayInfo}</span></div>
+                                <div class="time-row"><span class="time-val">${arrDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${arrInput.value}</span></div>
                             </div>
-                            <div class="time-row">
-                                <span class="time-val" style="${isCancelled ? 'text-decoration:line-through;' : ''}">${arrDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                <span class="station-val">${arrInput.value}</span>
+                            <div class="price-block">
+                                <span class="price-val">${journey.lines.base_price} €</span>
+                                <button class="btn-book" onclick="bookTrain('${journey.id}', '${depId}', '${arrId}', ${journey.lines.base_price})">Réserver</button>
                             </div>
                         </div>
-                        <div class="price-block">
-                            ${isCancelled ? '<span style="color:var(--primary-red); font-weight:bold;">SUPPRIMÉ</span>' : `
-                                <span class="price-val">${journey.lines.base_price} €</span>
-                                <button class="btn-book" onclick="bookTrain('${journey.id}', '${depInput.value}', '${arrInput.value}')">Réserver</button>
-                            `}
+                        
+                        <!-- Ligne de circuit Droit -->
+                        <div class="timeline-track">
+                            <div class="track-stop"><div class="track-dot"></div>DÉPART<br>${depInput.value}</div>
+                            <div class="track-stop"><div class="track-dot" style="border-color:#CBD5E1; background:#F8FAFC;"></div>Passage<br>En transit</div>
+                            <div class="track-stop"><div class="track-dot end"></div>ARRIVÉE<br>${arrInput.value}</div>
                         </div>
                     </div>
                 `;
             });
         } else {
-            resContainer.innerHTML = '<p>Aucun train disponible pour cette date.</p>';
+            resContainer.innerHTML = '<p>Aucun train programmé.</p>';
         }
     }
 
-    // FONCTION : Tableau Horaires en Gare
-    function searchBoardStation() {
-        searchStation(document.getElementById('board-input'), 'board-list');
-        // Quand l'utilisateur clique sur une gare de la liste, le onclick de searchStation met à jour le dataset.id. 
-        // On écoute le changement (simulé ici en bindant l'event sur la div cliquée dans searchStation).
-        const list = document.getElementById('board-list');
-        const oldDivs = list.querySelectorAll('div');
-        oldDivs.forEach(div => {
-            const oldClick = div.onclick;
-            div.onclick = () => {
-                oldClick();
-                loadStationBoard(document.getElementById('board-input').dataset.id, document.getElementById('board-input').value);
+    async function handleAuth() {
+        if(!currentUser) {
+            await supabase.auth.signInWithOAuth({ provider: 'github' });
+        } else {
+            alert("Vous êtes déjà connecté.");
+        }
+    }
+
+    // NOUVEAU : Sauvegarde du billet dans Supabase
+    async function bookTrain(journeyId, depId, arrId, price) {
+        if (!currentUser) {
+            alert('Vous devez obligatoirement vous connecter pour associer un nom au billet.');
+            handleAuth();
+            return;
+        }
+        
+        const numCB = prompt("Paiement MONRail\nMontant : " + price + "€\nEntrez votre numéro de carte (Système Fictif) :");
+        if(numCB) {
+            // Insertion dans la BDD Supabase
+            const { error } = await supabase.from('tickets').insert([{
+                user_id: currentUser.id,
+                passenger_name: currentUser.email, // ou un prompt pour demander le nom
+                journey_id: journeyId,
+                departure_station_id: depId,
+                arrival_station_id: arrId,
+                price_paid: price
+            }]);
+
+            if(error) {
+                alert("Erreur lors de l'émission du billet : " + error.message);
+            } else {
+                alert("Paiement validé ! Retrouvez votre billet dans l'espace 'Vos billets'.");
+                openTicketsModal(); // Ouvre directement la modale
             }
+        }
+    }
+
+    // NOUVEAU : Récupération des billets depuis Supabase
+    async function openTicketsModal() {
+        if(!currentUser) return alert("Veuillez vous connecter d'abord.");
+        
+        const modal = document.getElementById('tickets-modal');
+        const container = document.getElementById('tickets-list-container');
+        modal.style.display = 'flex';
+        container.innerHTML = '<p>Chargement de vos billets...</p>';
+
+        const { data, error } = await supabase.from('tickets')
+            .select('*, journeys(departure_date, lines(train_type, train_number))')
+            .eq('user_id', currentUser.id)
+            .order('booking_date', { ascending: false });
+
+        if(error) return container.innerHTML = '<p>Erreur de chargement.</p>';
+        
+        container.innerHTML = '';
+        if(data.length === 0) return container.innerHTML = '<p>Vous n\'avez aucun billet.</p>';
+
+        data.forEach(ticket => {
+            const depName = getStationName(ticket.departure_station_id);
+            const arrName = getStationName(ticket.arrival_station_id);
+            const depDate = new Date(ticket.journeys.departure_date);
+            
+            // Format Billet pour PDF
+            const ticketDivId = `ticket-${ticket.id}`;
+            container.innerHTML += `
+                <div class="result-card" id="${ticketDivId}" style="border: 2px solid var(--primary-green); padding:20px;">
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
+                        <strong>MONRail - ${ticket.journeys.lines.train_type} N°${ticket.journeys.lines.train_number}</strong>
+                        <span style="color:gray;">${depDate.toLocaleDateString()}</span>
+                    </div>
+                    <h3 style="margin:5px 0;">${depName} ➔ ${arrName}</h3>
+                    <p style="margin:5px 0;"><strong>Départ à :</strong> ${depDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                    <p style="margin:5px 0;"><strong>Passager :</strong> ${ticket.passenger_name.toUpperCase()}</p>
+                    <p style="font-size:12px; color:gray; text-align:center; margin-top:15px;">Billet Non Remboursable / Non Échangeable<br>Généré le ${new Date(ticket.booking_date).toLocaleDateString()}</p>
+                </div>
+                <button class="btn-book" style="margin-bottom:25px;" onclick="downloadSpecificPDF('${ticketDivId}')">Télécharger PDF</button>
+            `;
         });
     }
 
-    async function loadStationBoard(stationId, stationName) {
+    function downloadSpecificPDF(elementId) {
+        html2pdf(document.getElementById(elementId));
+    }
+
+    // Horaires Gare
+    function searchBoardStation() {
+        searchStation(document.getElementById('board-input'), 'board-list');
+        const list = document.getElementById('board-list');
+        list.querySelectorAll('div').forEach(div => {
+            const oldClick = div.onclick;
+            div.onclick = () => { oldClick(); loadStationBoard(); }
+        });
+    }
+
+    async function loadStationBoard() {
         const tbody = document.getElementById('board-body');
-        tbody.innerHTML = '<tr><td colspan="5">Chargement du trafic en temps réel...</td></tr>';
-        
-        // MVP: On récupère tous les trajets et on génère de faux départs/arrivées pour simuler l'activité de la gare
-        let { data, error } = await supabase.from('journeys').select('*, lines(*)').limit(10);
-        
+        let { data } = await supabase.from('journeys').select('*, lines(*)').limit(5);
         tbody.innerHTML = '';
         if(data) {
             data.forEach((journey, i) => {
                 const time = new Date(journey.departure_date);
-                time.setMinutes(time.getMinutes() + (i * 15)); // Simuler des horaires différents
-                
-                let statusHtml = '<span class="status-on-time">À l\'heure</span>';
-                if(journey.status === 'delayed') statusHtml = `<span class="status-delayed">Retard ${journey.delay_minutes} min</span>`;
-                if(journey.status === 'cancelled') statusHtml = '<span class="status-cancelled">Supprimé</span>';
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="font-size:18px;">${time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                        <td><span class="train-badge ${journey.lines.train_type.includes('TGV') ? 'badge-tgv' : 'badge-ter'}">${journey.lines.train_type}</span></td>
-                        <td>Paris (Simulation)</td>
-                        <td>${Math.floor(Math.random() * 10) + 1}</td>
-                        <td>${statusHtml}</td>
-                    </tr>
-                `;
+                time.setMinutes(time.getMinutes() + (i * 15));
+                let status = journey.status === 'delayed' ? `<span style="color:#F59E0B">Retard</span>` : (journey.status === 'cancelled' ? '<span style="color:red">Supprimé</span>' : '<span style="color:green">À l\'heure</span>');
+                tbody.innerHTML += `<tr><td>${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${journey.lines.train_type}</td><td>${status}</td></tr>`;
             });
         }
     }
-
-    async function login() { alert("Redirection vers l'espace de connexion..."); }
-
-    async function bookTrain(journeyId, depStation, arrStation) {
-        const numCB = prompt("Paiement Sécurisé MONRail\nEntrez votre numéro de carte (Fictif) :");
-        if(numCB) {
-            const ticketHTML = `
-                <div class="result-card" id="print-ticket" style="display:block; text-align:center; max-width:400px; margin: 0 auto;">
-                    <h2 style="color:var(--primary-green); margin-top:0;">Billet Confirmé</h2>
-                    <p style="font-size:24px; font-weight:800; margin:15px 0;">${depStation} ➔ ${arrStation}</p>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${journeyId}" style="border-radius:10px; margin-bottom:15px;">
-                    <br><button class="btn-login" style="margin:0 auto;" onclick="downloadPDF()">Enregistrer PDF</button>
-                </div>
-            `;
-            document.getElementById('results-container').innerHTML = ticketHTML;
-        }
-    }
-    function downloadPDF() { html2pdf(document.getElementById('print-ticket')); }
 </script>
 </body>
 </html>
