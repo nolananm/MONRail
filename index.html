@@ -14,10 +14,9 @@
     <a href="#" class="logo">MON<span>Rail</span><span class="dot">.</span></a>
     <div class="nav-links">
         <a href="#horaires-gare">Horaires en gare</a>
-        <a onclick="openTicketsModal()">Vos billets</a>
+        <a onclick="openTicketsModal()" style="cursor: pointer;">Vos billets</a>
     </div>
     <div class="nav-actions">
-        <!-- Remplacé par une simulation pour éviter le blocage OAuth -->
         <button class="btn-login" id="auth-btn" onclick="handleAuth()">Mon Espace</button>
     </div>
 </header>
@@ -77,7 +76,7 @@
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let stations = [];
-    let fakeUserEmail = localStorage.getItem('monrail_user'); // Auth simplifiée locale pour MVP
+    let fakeUserEmail = localStorage.getItem('monrail_user'); 
 
     if(fakeUserEmail) {
         document.getElementById('auth-btn').innerText = fakeUserEmail.split('@')[0];
@@ -85,7 +84,7 @@
 
     async function loadStations() {
         let { data, error } = await supabase.from('stations').select('*');
-        if (error) console.error("Erreur de chargement des gares:", error);
+        if (error) console.error("Erreur gares:", error);
         stations = data || [];
         document.getElementById('date-input').valueAsDate = new Date();
     }
@@ -110,14 +109,13 @@
             div.innerText = s.name;
             div.onclick = () => {
                 inputEle.value = s.name;
-                inputEle.dataset.id = s.id; // Sauvegarde de l'ID
+                inputEle.dataset.id = s.id; 
                 list.style.display = 'none';
             };
             list.appendChild(div);
         });
     }
 
-    // Récupère l'ID même si l'utilisateur a tapé le texte sans cliquer la liste
     function forceGetStationId(inputEle) {
         if(inputEle.dataset.id) return inputEle.dataset.id;
         const match = stations.find(s => s.name.toLowerCase() === inputEle.value.toLowerCase());
@@ -135,7 +133,7 @@
 
         document.getElementById('results-header').innerHTML = `Résultats : ${depInput.value} ➔ ${arrInput.value}`;
         const resContainer = document.getElementById('results-container');
-        resContainer.innerHTML = '<p>Recherche en cours...</p>';
+        resContainer.innerHTML = '<p style="font-weight:600; text-align:center;">Recherche en cours...</p>';
         
         let { data, error } = await supabase.from('journeys').select('*, lines(*)').neq('status', 'cancelled');
         if (error) { resContainer.innerHTML = '<p>Erreur réseau.</p>'; return; }
@@ -150,7 +148,7 @@
 
                 resContainer.innerHTML += `
                     <div class="result-card">
-                        <div class="result-card-header">
+                        <div class="result-card-header" style="display:flex; width:100%; align-items:center;">
                             <div class="train-badge ${badgeClass}">${journey.lines.train_type} <br><small>N°${journey.lines.train_number}</small></div>
                             <div class="journey-times">
                                 <div class="time-row"><span class="time-val">${depDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><span class="station-val">${depInput.value} ${delayInfo}</span></div>
@@ -161,7 +159,7 @@
                                 <button class="btn-book" onclick="bookTrain('${journey.id}', '${depId}', '${arrId}', ${journey.lines.base_price})">Réserver</button>
                             </div>
                         </div>
-                        <div class="timeline-track">
+                        <div class="timeline-track" style="width:100%;">
                             <div class="track-stop"><div class="track-dot"></div>DÉPART<br>${depInput.value}</div>
                             <div class="track-stop"><div class="track-dot" style="border-color:#CBD5E1; background:#F8FAFC;"></div>Passage<br>En transit</div>
                             <div class="track-stop"><div class="track-dot end"></div>ARRIVÉE<br>${arrInput.value}</div>
@@ -170,12 +168,12 @@
                 `;
             });
         } else {
-            resContainer.innerHTML = '<p>Aucun train programmé.</p>';
+            resContainer.innerHTML = '<p>Aucun train programmé aujourd\'hui.</p>';
         }
     }
 
     function handleAuth() {
-        const email = prompt("Simulateur de Connexion\nEntrez votre adresse email :");
+        const email = prompt("Simulateur de Connexion\nEntrez votre adresse email (ex: jean@mail.com) :");
         if(email) {
             localStorage.setItem('monrail_user', email);
             fakeUserEmail = email;
@@ -258,13 +256,16 @@
         const tbody = document.getElementById('board-body');
         let { data } = await supabase.from('journeys').select('*, lines(*)').limit(5);
         tbody.innerHTML = '';
-        if(data) {
+        if(data && data.length > 0) {
             data.forEach((journey, i) => {
                 const time = new Date(journey.departure_date);
                 time.setMinutes(time.getMinutes() + (i * 15));
-                let status = journey.status === 'delayed' ? `<span style="color:#F59E0B">Retard</span>` : (journey.status === 'cancelled' ? '<span style="color:red">Supprimé</span>' : '<span style="color:green">À l'heure</span>');
-                tbody.innerHTML += `<tr><td>${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${journey.lines.train_type}</td><td>${status}</td></tr>`;
+                // L'ERREUR ÉTAIT ICI : apostrophe corrigée en \"
+                let status = journey.status === 'delayed' ? `<span style="color:#F59E0B">Retard</span>` : (journey.status === 'cancelled' ? '<span style="color:red">Supprimé</span>' : '<span style="color:green">À l\'heure</span>');
+                tbody.innerHTML += `<tr><td>${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${journey.lines.train_type} N°${journey.lines.train_number}</td><td>${status}</td></tr>`;
             });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3">Aucun train prévu.</td></tr>';
         }
     }
 </script>
