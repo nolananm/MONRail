@@ -16,7 +16,6 @@
 <div class="container" style="max-width: 1200px;">
     <div class="admin-layout">
         
-        <!-- COLONNE 1 : INFRASTRUCTURE -->
         <div style="flex: 1; min-width:300px;">
             <div class="admin-card">
                 <h2>1. Infrastructure (Lignes & Gares)</h2>
@@ -33,11 +32,10 @@
             </div>
         </div>
 
-        <!-- COLONNE 2 : NOUVEAU - PLANIFICATION CALENDRIER -->
         <div style="flex: 1; min-width:300px;">
             <div class="admin-card" style="border: 2px solid var(--primary-green);">
-                <h2 style="color:var(--primary-green);">2. Calendrier (Planifier un départ)</h2>
-                <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Sélectionnez une ligne existante et définissez sa date de départ réelle pour qu'elle apparaisse aux clients.</p>
+                <h2 style="color:var(--primary-green);">2. Planifier un départ</h2>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Sélectionnez une ligne pour qu'elle apparaisse chez les clients.</p>
                 
                 <select id="select-line-plan" class="input-admin"></select>
                 <input type="datetime-local" id="plan-date" class="input-admin">
@@ -45,18 +43,15 @@
             </div>
         </div>
 
-        <!-- COLONNE 3 : NOUVEAU - GUICHET MANUEL -->
         <div style="flex: 1; min-width:300px;">
             <div class="admin-card">
                 <h2>3. Guichet (Réservation Manuelle)</h2>
-                <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Générer un billet au nom du client sans paiement par carte (espèces au guichet).</p>
                 
-                <input type="text" id="manual-passenger" class="input-admin" placeholder="Nom du passager">
+                <input type="text" id="manual-passenger" class="input-admin" placeholder="Email du passager">
                 <input type="text" id="manual-journey-id" class="input-admin" placeholder="ID du Trajet (UUID)">
                 <button class="btn-admin" onclick="manualBooking()">Éditer le billet</button>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -65,10 +60,10 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Initialisation
     async function initAdmin() {
-        // Charger les lignes pour la planification
-        const { data: lines } = await supabase.from('lines').select('*');
+        const { data: lines, error } = await supabase.from('lines').select('*');
+        if(error) return console.error("Erreur chargement lignes:", error);
+        
         const selectPlan = document.getElementById('select-line-plan');
         if(lines) {
             lines.forEach(line => {
@@ -83,51 +78,36 @@
 
     async function addStation() {
         const name = document.getElementById('new-station-name').value;
+        if(!name) return alert('Saisissez un nom de gare.');
         const { error } = await supabase.from('stations').insert([{ name: name }]);
-        if (!error) { alert('Gare ajoutée !'); document.getElementById('new-station-name').value = ''; }
+        if (error) alert("Erreur: " + error.message); else { alert('Gare ajoutée !'); location.reload(); }
     }
 
     async function createLine() {
         const type = document.getElementById('train-type').value;
         const price = document.getElementById('base-price').value;
+        if(!price) return alert('Saisissez un prix.');
         const trainNumber = Math.floor(100000 + Math.random() * 900000).toString();
         const { error } = await supabase.from('lines').insert([{ train_number: trainNumber, train_type: type, base_price: price }]);
-        if (!error) { alert('Ligne créée ! Rechargez la page pour l\'avoir dans le planificateur.'); }
+        if (error) alert("Erreur: " + error.message); else { alert('Ligne créée !'); location.reload(); }
     }
     
-    // NOUVEAU : Planifier un Trajet (Calendrier)
     async function planJourney() {
         const lineId = document.getElementById('select-line-plan').value;
         const date = document.getElementById('plan-date').value;
-        
-        if(!lineId || !date) return alert("Veuillez sélectionner une ligne et une date.");
+        if(!lineId || !date) return alert("Sélectionnez une ligne et une date.");
 
-        const { error } = await supabase.from('journeys').insert([{ 
-            line_id: lineId, 
-            departure_date: date,
-            status: 'on_time'
-        }]);
-
-        if (error) alert("Erreur : " + error.message);
-        else alert("Train mis en circulation avec succès à cette date ! Les clients peuvent désormais le réserver.");
+        const { error } = await supabase.from('journeys').insert([{ line_id: lineId, departure_date: date, status: 'on_time' }]);
+        if (error) alert("Erreur : " + error.message); else alert("Train mis en circulation avec succès !");
     }
 
-    // NOUVEAU : Réservation Manuelle
     async function manualBooking() {
         const passenger = document.getElementById('manual-passenger').value;
         const journeyId = document.getElementById('manual-journey-id').value;
-        
-        if(!passenger || !journeyId) return alert("Nom et ID Trajet requis.");
+        if(!passenger || !journeyId) return alert("Email et ID Trajet requis.");
 
-        // On crée un billet sans lier de compte utilisateur web (user_id restera NULL ou un ID admin)
-        const { error } = await supabase.from('tickets').insert([{
-            passenger_name: passenger,
-            journey_id: journeyId,
-            price_paid: 0 // Payé au guichet
-        }]);
-
-        if (error) alert("Erreur : " + error.message);
-        else alert("Billet édité et validé en base de données pour " + passenger + ".");
+        const { error } = await supabase.from('tickets').insert([{ passenger_name: passenger, journey_id: journeyId, price_paid: 0 }]);
+        if (error) alert("Erreur : " + error.message); else alert("Billet validé en base de données.");
     }
 </script>
 </body>
