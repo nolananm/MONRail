@@ -3,35 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <title>MONRail - Réservation</title>
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; margin: 0; color: #0f172a; }
+        header { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+        .logo { font-size: 24px; font-weight: 900; color: #0f172a; text-decoration: none; }
+        .logo span { color: #e11d48; }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .search-box { background: white; padding: 20px; border-radius: 99px; display: flex; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; }
+        .input-group { flex: 1; position: relative; }
+        .input-group input { width: 100%; border: none; outline: none; font-size: 16px; font-weight: bold; padding: 10px; background: transparent; box-sizing: border-box; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; }
+        .autocomplete-list div { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .autocomplete-list div:hover { background: #f0fdf4; color: #059669; }
+        button { background: #059669; color: white; border: none; padding: 15px 30px; border-radius: 99px; font-weight: bold; cursor: pointer; }
+        .result-card { background: white; border-radius: 16px; padding: 25px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .timeline { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; position: relative; }
+        .stop { text-align: center; font-size: 13px; font-weight: bold; color: #64748b; z-index: 2; position: relative; }
+        .dot { width: 14px; height: 14px; background: white; border: 4px solid #cbd5e1; border-radius: 50%; margin: 0 auto 8px auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 15px; border-bottom: 1px solid #334155; }
+    </style>
 </head>
 <body>
+
 <header>
     <a href="#" class="logo">MON<span>Rail</span></a>
 </header>
+
 <div class="container">
-    
-    <div class="search-widget" style="display:flex; gap:10px; align-items:center; background:white; padding:15px; border-radius:99px; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
-        <select id="search-dep" style="flex:1; border:none; outline:none; font-size:16px; font-weight:bold; background:transparent; padding:10px;"><option value="">Gare de départ...</option></select>
-        <select id="search-arr" style="flex:1; border:none; outline:none; font-size:16px; font-weight:bold; background:transparent; padding:10px;"><option value="">Gare d'arrivée...</option></select>
-        <input type="date" id="search-date" style="flex:0.5; border:none; outline:none; font-size:16px; font-weight:bold; background:transparent; padding:10px;">
-        <button style="background:#059669; color:white; border:none; padding:15px 30px; border-radius:99px; font-weight:bold; cursor:pointer;" onclick="searchTrains()">Rechercher</button>
+    <div class="search-box">
+        <div class="input-group">
+            <input type="text" id="dep-input" placeholder="Gare de départ">
+            <div id="dep-list" class="autocomplete-list"></div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="arr-input" placeholder="Gare d'arrivée">
+            <div id="arr-list" class="autocomplete-list"></div>
+        </div>
+        <div class="input-group" style="flex:0.5;"><input type="date" id="date-input"></div>
+        <button onclick="searchTrains()">Rechercher</button>
     </div>
 
-    <div id="results-container" style="margin-top:40px;"></div>
+    <div id="results" style="margin-top: 40px;"></div>
 
-    <div style="background:#0f172a; padding:30px; border-radius:20px; margin-top:60px; color:white;">
-        <h2>Horaires en direct</h2>
-        <select id="board-station" onchange="loadBoard()" style="width:100%; max-width:400px; padding:12px; border-radius:8px; margin-bottom:20px;"><option value="">Sélectionnez une gare...</option></select>
-        
-        <table style="width:100%; text-align:left; border-collapse:collapse;">
-            <thead><tr style="border-bottom:1px solid #334155;">
-                <th style="padding:15px 10px; color:#94a3b8;">Heure</th>
-                <th style="padding:15px 10px; color:#94a3b8;">Train</th>
-                <th style="padding:15px 10px; color:#94a3b8;">Statut</th>
-            </tr></thead>
-            <tbody id="board-body"><tr><td colspan="3" style="padding:15px 10px;">Sélectionnez une gare ci-dessus.</td></tr></tbody>
+    <div style="background: #0f172a; color: white; padding: 30px; border-radius: 20px; margin-top: 60px;">
+        <h2>Horaires en gare (Départs et Arrivées)</h2>
+        <div class="input-group" style="max-width: 400px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 20px;">
+            <input type="text" id="board-input" placeholder="Saisir votre gare..." style="color:white;">
+            <div id="board-list" class="autocomplete-list" style="color:black;"></div>
+        </div>
+        <table>
+            <thead><tr><th style="color:#94a3b8;">Heure</th><th style="color:#94a3b8;">Train</th><th style="color:#94a3b8;">Direction/Provenance</th></tr></thead>
+            <tbody id="board-body"><tr><td colspan="3">Recherchez une gare ci-dessus.</td></tr></tbody>
         </table>
     </div>
 </div>
@@ -40,108 +65,123 @@
     const db = window.supabase.createClient('https://bzlzjyktulpplftqdmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6bHpqeWt0dWxwcGxmdHFkbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDA2OTMsImV4cCI6MjEwODQxNjY5M30.d5GL-oPuYSzSeONgHpOKA0_MqE4h28srYlnfAx2ASlA');
     let stations = [];
 
-    async function initClient() {
-        document.getElementById('search-date').valueAsDate = new Date();
-        const { data } = await db.from('stations').select('*').order('name');
+    async function init() {
+        document.getElementById('date-input').valueAsDate = new Date();
+        const { data } = await db.from('stations').select('*');
         stations = data || [];
         
-        let options = '<option value="">Sélectionner...</option>';
-        stations.forEach(s => options += `<option value="${s.id}">${s.name}</option>`);
-        
-        document.getElementById('search-dep').innerHTML = '<option value="">Gare de départ...</option>' + options;
-        document.getElementById('search-arr').innerHTML = '<option value="">Gare d\'arrivée...</option>' + options;
-        document.getElementById('board-station').innerHTML = '<option value="">Sélectionnez une gare...</option>' + options;
+        setupAutocomplete('dep-input', 'dep-list');
+        setupAutocomplete('arr-input', 'arr-list');
+        setupAutocomplete('board-input', 'board-list', loadBoard);
     }
-    initClient();
+    init();
 
-    function getStationName(id) { const s = stations.find(x => x.id === id); return s ? s.name : 'Inconnu'; }
+    function setupAutocomplete(inputId, listId, callback = null) {
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+        input.addEventListener('input', () => {
+            const val = input.value.toLowerCase();
+            list.innerHTML = '';
+            if(!val) return list.style.display = 'none';
+            const matches = stations.filter(s => s.name.toLowerCase().includes(val));
+            list.style.display = matches.length ? 'block' : 'none';
+            matches.forEach(s => {
+                const div = document.createElement('div'); div.innerText = s.name;
+                div.onclick = () => { 
+                    input.value = s.name; input.dataset.id = s.id; list.style.display = 'none'; 
+                    if(callback) callback(s.id);
+                };
+                list.appendChild(div);
+            });
+        });
+        document.addEventListener('click', (e) => { if(e.target !== input) list.style.display = 'none'; });
+    }
+
+    function formatTime(isoStr) { return new Date(isoStr).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 
     async function searchTrains() {
-        const depId = document.getElementById('search-dep').value;
-        const arrId = document.getElementById('search-arr').value;
-        const dateVal = document.getElementById('search-date').value;
-        const res = document.getElementById('results-container');
-        
-        if(!depId || !arrId || !dateVal) return alert("Sélectionnez vos critères de recherche.");
-        res.innerHTML = '<p style="text-align:center; font-weight:bold;">Recherche en cours...</p>';
+        const depId = document.getElementById('dep-input').dataset.id;
+        const arrId = document.getElementById('arr-input').dataset.id;
+        const dateVal = document.getElementById('date-input').value;
+        const res = document.getElementById('results');
+
+        if(!depId || !arrId || !dateVal) return alert("Sélectionnez les gares via les suggestions.");
+        res.innerHTML = '<p>Recherche en cours...</p>';
 
         const startOfDay = new Date(dateVal); startOfDay.setHours(0,0,0,0);
         const endOfDay = new Date(dateVal); endOfDay.setHours(23,59,59,999);
 
-        // Trouve les lignes directes correspondantes
-        const { data: lines } = await db.from('lines').select('id, base_price, train_type, train_number').eq('departure_station_id', depId).eq('arrival_station_id', arrId);
-        if(!lines || lines.length === 0) return res.innerHTML = '<div style="background:white; padding:30px; border-radius:12px; text-align:center;">Aucun train direct ne relie ces gares.</div>';
-        
-        const lineIds = lines.map(l => l.id);
-        const { data: journeys } = await db.from('journeys').select('*').in('line_id', lineIds).gte('departure_date', startOfDay.toISOString()).lte('departure_date', endOfDay.toISOString()).order('departure_date');
-
-        if(!journeys || journeys.length === 0) return res.innerHTML = '<div style="background:white; padding:30px; border-radius:12px; text-align:center;">Aucun départ programmé à cette date.</div>';
+        // Recherche des trains ayant ce départ et cette arrivée exacte
+        const { data } = await db.from('journeys').select('*')
+            .eq('departure_station_id', depId).eq('arrival_station_id', arrId)
+            .gte('departure_time', startOfDay.toISOString()).lte('departure_time', endOfDay.toISOString())
+            .order('departure_time');
 
         res.innerHTML = '';
-        journeys.forEach(j => {
-            const line = lines.find(l => l.id === j.line_id);
-            const d = new Date(j.departure_date);
-            const a = new Date(d.getTime() + (90 * 60000) + (j.delay_minutes * 60000));
-            
-            let statusBadge = '';
-            let opacity = '1';
-            if(j.status === 'cancelled') { opacity = '0.5'; statusBadge = `<span style="background:red; color:white; padding:5px 10px; border-radius:5px; font-size:12px; font-weight:bold;">SUPPRIMÉ (${j.motif})</span>`; }
-            else if(j.status === 'delayed') { statusBadge = `<span style="background:orange; color:white; padding:5px 10px; border-radius:5px; font-size:12px; font-weight:bold;">RETARD +${j.delay_minutes}M (${j.motif})</span>`; }
+        if(!data || data.length === 0) return res.innerHTML = '<div class="result-card">Aucun train direct programmé ce jour.</div>';
+
+        data.forEach(j => {
+            const stops = JSON.parse(j.stops || '[]');
+            let stopsHtml = '';
+            stops.forEach(s => {
+                stopsHtml += `<div class="stop"><div class="dot"></div>${formatTime(s.arrival)} / ${formatTime(s.departure)}<br><span style="color:#0f172a;">${s.name}</span></div>`;
+            });
 
             res.innerHTML += `
-                <div style="background:white; border-radius:16px; padding:25px; margin-bottom:20px; border:1px solid #e2e8f0; opacity:${opacity};">
-                    <div style="margin-bottom:15px;">${statusBadge}</div>
+                <div class="result-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <div style="background:#e0f2fe; color:#0284c7; display:inline-block; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:12px; margin-bottom:10px;">${line.train_type} N°${line.train_number}</div>
-                            <div style="display:flex; align-items:center; gap:15px; margin-bottom:10px;">
-                                <span style="font-size:24px; font-weight:900;">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span> <span style="color:#64748b; font-weight:600;">${getStationName(depId)}</span>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:15px;">
-                                <span style="font-size:24px; font-weight:900;">${a.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span> <span style="color:#64748b; font-weight:600;">${getStationName(arrId)}</span>
-                            </div>
+                            <div style="background:#e0f2fe; color:#0284c7; display:inline-block; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:12px; margin-bottom:10px;">${j.train_type} N°${j.train_number}</div>
+                            <div style="font-size:24px; font-weight:900;">${formatTime(j.departure_time)} <span style="font-size:16px; color:#64748b; font-weight:600;">${document.getElementById('dep-input').value}</span></div>
+                            <div style="font-size:24px; font-weight:900;">${formatTime(j.arrival_time)} <span style="font-size:16px; color:#64748b; font-weight:600;">${document.getElementById('arr-input').value}</span></div>
                         </div>
-                        <div style="text-align:right; border-left:1px dashed #cbd5e1; padding-left:30px;">
-                            <span style="font-size:32px; font-weight:900; display:block; margin-bottom:15px;">${line.base_price} €</span>
-                            <button style="background:transparent; border:2px solid #0f172a; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="alert('Réservation simulée.')">Réserver</button>
+                        <div style="text-align:right;">
+                            <div style="font-size:32px; font-weight:900; margin-bottom:15px;">${j.base_price} €</div>
+                            <button style="padding:10px 20px;">Réserver</button>
                         </div>
+                    </div>
+                    
+                    <div class="timeline">
+                        <div style="position:absolute; top:27px; left:0; width:100%; height:2px; background:#e2e8f0; z-index:1;"></div>
+                        <div class="stop"><div class="dot" style="border-color:#059669;"></div>DÉPART<br><span style="color:#0f172a;">${document.getElementById('dep-input').value}</span></div>
+                        ${stopsHtml}
+                        <div class="stop"><div class="dot" style="border-color:#e11d48;"></div>ARRIVÉE<br><span style="color:#0f172a;">${document.getElementById('arr-input').value}</span></div>
                     </div>
                 </div>
             `;
         });
     }
 
-    async function loadBoard() {
-        const stId = document.getElementById('board-station').value;
+    async function loadBoard(stationId) {
         const tbody = document.getElementById('board-body');
-        if(!stId) return tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Sélectionnez une gare.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3">Chargement...</td></tr>';
         
-        tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Chargement...</td></tr>';
         const now = new Date();
-        const future = new Date(now.getTime() + (10 * 3600 * 1000));
+        const future = new Date(now.getTime() + (10 * 3600 * 1000)); // +10h max
 
-        // Trouve les départs ou arrivées à cette gare
-        const { data: lines } = await db.from('lines').select('id, train_type, train_number').or(`departure_station_id.eq.${stId},arrival_station_id.eq.${stId}`);
-        if(!lines || lines.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Aucun train ne dessert cette gare.</td></tr>';
-        
-        const lineIds = lines.map(l => l.id);
-        const { data: journeys } = await db.from('journeys').select('*').in('line_id', lineIds).gte('departure_date', now.toISOString()).lte('departure_date', future.toISOString()).order('departure_date').limit(10);
+        // Recherche des trains où la gare est départ ou arrivée
+        const { data } = await db.from('journeys').select('*')
+            .or(`departure_station_id.eq.${stationId},arrival_station_id.eq.${stationId}`)
+            .gte('departure_time', now.toISOString())
+            .lte('departure_time', future.toISOString())
+            .order('departure_time')
+            .limit(10);
 
         tbody.innerHTML = '';
-        if(!journeys || journeys.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="padding:15px 10px;">Aucun train prévu dans les 10 prochaines heures.</td></tr>';
+        if(!data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="3">Aucun train dans les 10 prochaines heures.</td></tr>';
 
-        journeys.forEach(j => {
-            const line = lines.find(l => l.id === j.line_id);
-            const d = new Date(j.departure_date);
-            let status = '<span style="color:#22c55e; font-weight:bold;">À l\'heure</span>';
-            if(j.status === 'delayed') status = `<span style="color:#f59e0b; font-weight:bold;">Retard (${j.motif})</span>`;
-            if(j.status === 'cancelled') status = `<span style="color:#ef4444; font-weight:bold;">Supprimé</span>`;
+        data.forEach(j => {
+            const isDep = j.departure_station_id === stationId;
+            const time = isDep ? formatTime(j.departure_time) : formatTime(j.arrival_time);
+            const targetStationId = isDep ? j.arrival_station_id : j.departure_station_id;
+            const targetName = stations.find(s => s.id === targetStationId)?.name || 'Inconnu';
+            const direction = isDep ? `<span style="color:#0ea5e9;">➔ Vers</span> ${targetName}` : `<span style="color:#f59e0b;">⟵ En provenance de</span> ${targetName}`;
 
             tbody.innerHTML += `
-                <tr style="border-bottom:1px solid #334155;">
-                    <td style="padding:15px 10px; font-weight:bold; font-size:18px;">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
-                    <td style="padding:15px 10px; font-weight:bold;">${line.train_type} N°${line.train_number}</td>
-                    <td style="padding:15px 10px;">${status}</td>
+                <tr>
+                    <td style="font-size:20px; font-weight:bold; color:white;">${time}</td>
+                    <td style="font-weight:bold; color:white;">${j.train_type} N°${j.train_number}</td>
+                    <td style="color:white;">${direction}</td>
                 </tr>
             `;
         });
